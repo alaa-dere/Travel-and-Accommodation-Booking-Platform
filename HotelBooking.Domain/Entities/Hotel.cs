@@ -1,0 +1,43 @@
+namespace HotelBooking.Domain.Entities;
+
+public class Hotel
+{
+    public int HotelId { get; set; }
+    public string Name { get; set; }
+    public string OwnerName { get; set; }
+    public string? Description { get; set; }
+    public string? History { get; set; }
+    public string Address { get; set; }
+    public double Latitude { get; set; }
+    public double Longitude { get; set; }
+    public HotelType HotelType { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    
+    public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name is required", nameof(name));
+        }
+
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            throw new ArgumentException("OwnerName is required", nameof(ownerName));
+        }
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            throw new ArgumentException("Address is required", nameof(address));
+        }
+        Name = name ;
+        OwnerName = ownerName ;
+        Address = address ;
+        Latitude = latitude;
+        Longitude = longitude;
+        HotelType = hotelType;
+        IsActive = true;
+        CreatedAt = DateTime.UtcNow;
+    }
+}
