@@ -6,7 +6,7 @@ public class Room
     public int HotelId { get; set; }
     public string RoomNumber { get; set; }
     public RoomType RoomType { get; set; }
-    public int AdultCapacity { get; set; }
+    public int AdultsCapacity { get; set; }
     public int ChildCapacity { get; set; }
     public decimal PricePerNight { get; set; }
     public string? Description { get; set; }
@@ -47,7 +47,7 @@ public class Room
         RoomNumber = roomNumber;
         RoomType = roomType;
         PricePerNight = pricePerNight;
-        AdultCapacity = adultsCapacity;
+        AdultsCapacity = adultsCapacity;
         ChildCapacity = childCapacity;
         IsOperationallyAvailable = true;
         IsActive = true;

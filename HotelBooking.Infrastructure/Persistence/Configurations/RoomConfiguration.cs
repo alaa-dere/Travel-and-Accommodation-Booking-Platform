@@ -9,8 +9,9 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
     public void Configure(EntityTypeBuilder<Room> builder)
     {
         builder.HasKey( r => r.RoomId );
-        builder.HasOne( r => r.Hotel ).WithMany(hotel => hotel.Rooms).HasForeignKey( r => r.HotelId ).IsRequired();
+        builder.HasOne( r => r.Hotel ).WithMany(hotel => hotel.Rooms).HasForeignKey( r => r.HotelId ).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property( r => r.RoomNumber ).IsRequired().HasMaxLength(50);
         builder.HasIndex( r => new {r.RoomNumber,r.HotelId} ).IsUnique();
+        builder.Property(r => r.PricePerNight).HasPrecision(18, 2);
     }
 }
