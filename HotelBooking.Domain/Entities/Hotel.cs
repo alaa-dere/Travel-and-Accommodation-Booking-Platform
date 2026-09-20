@@ -3,6 +3,7 @@ namespace HotelBooking.Domain.Entities;
 public class Hotel
 {
     public int HotelId { get; set; }
+    public int CityId { get; set; }
     public string Name { get; set; }
     public string OwnerName { get; set; }
     public string? Description { get; set; }
@@ -14,8 +15,11 @@ public class Hotel
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public City? City { get; set; }
+    public ICollection<Room> Rooms { get; set; } = new List<Room>();
+    public ICollection<HotelImage> HotelImages { get; set; } = new List<HotelImage>();
     
-    public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType)
+    public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -31,6 +35,11 @@ public class Hotel
         {
             throw new ArgumentException("Address is required", nameof(address));
         }
+
+        if (cityId <= 0)
+        {
+            throw new ArgumentException("CityId should be positive", nameof(cityId));
+        }
         Name = name ;
         OwnerName = ownerName ;
         Address = address ;
@@ -39,5 +48,6 @@ public class Hotel
         HotelType = hotelType;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
+        CityId = cityId;
     }
 }

@@ -8,6 +8,7 @@ public class City
     public string PostOffice { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public ICollection<Hotel> Hotels { get; set; } = new List<Hotel>();
 
     public City(string name, string country, string postOffice)
     {

@@ -3,6 +3,7 @@ namespace HotelBooking.Domain.Entities;
 public class Room
 {
     public int RoomId { get; set; }
+    public int HotelId { get; set; }
     public string RoomNumber { get; set; }
     public RoomType RoomType { get; set; }
     public int AdultCapacity { get; set; }
@@ -13,8 +14,10 @@ public class Room
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public Hotel? Hotel { get; set; }
+    public ICollection<RoomImage> RoomImages { get; set; } = new List<RoomImage>();
 
-    public Room(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity)
+    public Room(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId)
     {
         if (string.IsNullOrWhiteSpace(roomNumber))
         {
@@ -35,6 +38,11 @@ public class Room
         {
             throw new ArgumentException("child capacity cannot be negative", nameof(childCapacity));
         }
+
+        if (hotelId <= 0)
+        {
+            throw new ArgumentException("Hotel ID should be positive", nameof(hotelId));
+        }
         
         RoomNumber = roomNumber;
         RoomType = roomType;
@@ -44,5 +52,6 @@ public class Room
         IsOperationallyAvailable = true;
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
+        HotelId = hotelId;
     }
 }
