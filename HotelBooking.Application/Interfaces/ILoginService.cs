@@ -5,5 +5,5 @@ namespace HotelBooking.Application.Interfaces;
 
 public interface ILoginService
 {
-    Task LoginAsync(LoginRequestDto request);
+    Task<string> LoginAsync(LoginRequestDto request);
 }

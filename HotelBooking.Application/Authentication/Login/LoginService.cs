@@ -7,14 +7,16 @@ public class LoginService : ILoginService
 {
     private readonly IUserRepository _userRepository;
     private readonly IPasswordHasher _passwordHasher;
+    private readonly IJwtTokenGenerator _jwtTokenGenerator;
 
-    public LoginService(IUserRepository userRepository, IPasswordHasher passwordHasher)
+    public LoginService(IUserRepository userRepository, IPasswordHasher passwordHasher, IJwtTokenGenerator jwtTokenGenerator)
     {
         _userRepository = userRepository;
         _passwordHasher = passwordHasher;
+        _jwtTokenGenerator = jwtTokenGenerator;
     }
 
-    public async Task LoginAsync(LoginRequestDto request)
+    public async Task<string> LoginAsync(LoginRequestDto request)
     {
         var username = request.Username;
         var user = await _userRepository.GetByUsernameAsync(username);
@@ -29,5 +31,8 @@ public class LoginService : ILoginService
         {
             throw new UnauthorizedException("Invalid username or password");
         }
+        
+        var token = _jwtTokenGenerator.GenerateToken(user);
+        return token;
     }
 }
