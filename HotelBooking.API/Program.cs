@@ -79,6 +79,7 @@ builder.Services.AddScoped<IGetAllCitiesService, GetAllCities>();
 builder.Services.AddScoped<ICreateCityService, CreateCity>();
 builder.Services.AddScoped<IUpdateCityService, UpdateCity>();
 builder.Services.AddScoped<IDeleteCityService, DeleteCity>();
+builder.Services.AddScoped<IHotelRepository, HotelRepository>();
 
 var app = builder.Build();
 
