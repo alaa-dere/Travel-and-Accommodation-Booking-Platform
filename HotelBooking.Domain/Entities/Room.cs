@@ -90,4 +90,10 @@ public class Room
         UpdatedAt = DateTime.UtcNow;
         HotelId = hotelId;
     }
+
+    public void ChangeStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

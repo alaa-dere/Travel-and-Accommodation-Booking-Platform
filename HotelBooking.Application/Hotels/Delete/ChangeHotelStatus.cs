@@ -21,5 +21,4 @@ public class ChangeHotelStatus : IChangeHotelStatusService
         hotel.ChangeStatus(isActive);
         await _hotelRepository.SaveChangesAsync();
     }
-
 }

@@ -1,4 +1,5 @@
 using HotelBooking.Application.Rooms.Create;
+using HotelBooking.Application.Rooms.Delete;
 using HotelBooking.Application.Rooms.Dtos;
 using HotelBooking.Application.Rooms.Retrive;
 using HotelBooking.Application.Rooms.Update;
@@ -14,12 +15,15 @@ public class RoomsController : ControllerBase
 {
     private readonly IGetAllRoomsService _getAllRoomsService;
     private readonly ICreateRoomService _createRoomService;
-    private readonly IUpdateRoomService _updateRoomlService;
-    public RoomsController(ICreateRoomService  createRoomService, IGetAllRoomsService  getAllRoomsService, IUpdateRoomService  updateRoomlService)
+    private readonly IUpdateRoomService _updateRoomService;
+    private readonly IChangeRoomStatusService _changeRoomStatusService;
+    
+    public RoomsController(ICreateRoomService createRoomService, IGetAllRoomsService getAllRoomsService, IUpdateRoomService updateRoomlService, IChangeRoomStatusService  changeRoomStatusService)
     {
         _createRoomService = createRoomService;
         _getAllRoomsService = getAllRoomsService;
-        _updateRoomlService = updateRoomlService;
+        _updateRoomService = updateRoomlService;
+        _changeRoomStatusService = changeRoomStatusService;
     }
     
     [HttpGet]
@@ -39,7 +43,14 @@ public class RoomsController : ControllerBase
     [HttpPut("{roomId}")]
     public async Task<IActionResult> PutAsync(int roomId, RoomRequestDto request)
     {
-        var room = await _updateRoomlService.UpdateRoomAsync(roomId, request);
+        var room = await _updateRoomService.UpdateRoomAsync(roomId, request);
         return Ok(room);
+    }
+    
+    [HttpPatch("{roomId}/status")]
+    public async Task<IActionResult> ChangeStatusAsync(int roomId, ChangeRoomStatusRequest request)
+    { 
+        await _changeRoomStatusService.ChangeRoomStatusAsync(roomId, request.IsActive);
+        return NoContent();
     }
 }
