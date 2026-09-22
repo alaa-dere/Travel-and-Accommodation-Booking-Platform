@@ -1,6 +1,7 @@
 using HotelBooking.Application.Rooms.Create;
 using HotelBooking.Application.Rooms.Dtos;
 using HotelBooking.Application.Rooms.Retrive;
+using HotelBooking.Application.Rooms.Update;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -13,10 +14,12 @@ public class RoomsController : ControllerBase
 {
     private readonly IGetAllRoomsService _getAllRoomsService;
     private readonly ICreateRoomService _createRoomService;
-    public RoomsController(ICreateRoomService  createRoomService, IGetAllRoomsService  getAllRoomsService)
+    private readonly IUpdateRoomService _updateRoomlService;
+    public RoomsController(ICreateRoomService  createRoomService, IGetAllRoomsService  getAllRoomsService, IUpdateRoomService  updateRoomlService)
     {
         _createRoomService = createRoomService;
         _getAllRoomsService = getAllRoomsService;
+        _updateRoomlService = updateRoomlService;
     }
     
     [HttpGet]
@@ -31,5 +34,12 @@ public class RoomsController : ControllerBase
     {
         var room = await _createRoomService.CreateRoomAsync(request);
         return Created("api/rooms", room);
+    }
+    
+    [HttpPut("{roomId}")]
+    public async Task<IActionResult> PutAsync(int roomId, RoomRequestDto request)
+    {
+        var room = await _updateRoomlService.UpdateRoomAsync(roomId, request);
+        return Ok(room);
     }
 }
