@@ -11,6 +11,7 @@ using HotelBooking.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HotelBooking.Application.Cities;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
@@ -72,6 +73,8 @@ builder.Services
         };
     });
 builder.Services.AddAuthorization();
+builder.Services.AddScoped<ICityRepository, CityRepository>();
+builder.Services.AddScoped<IGetAllCitiesService, GetAllCities>();
 
 var app = builder.Build();
 
