@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HotelBooking.Application.Cities;
 using HotelBooking.Application.Cities.Delete;
+using HotelBooking.Application.Hotels.Retrive;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
@@ -80,6 +81,7 @@ builder.Services.AddScoped<ICreateCityService, CreateCity>();
 builder.Services.AddScoped<IUpdateCityService, UpdateCity>();
 builder.Services.AddScoped<IDeleteCityService, DeleteCity>();
 builder.Services.AddScoped<IHotelRepository, HotelRepository>();
+builder.Services.AddScoped<IGetAllHotelsService, GetAllHotels>();
 
 var app = builder.Build();
 

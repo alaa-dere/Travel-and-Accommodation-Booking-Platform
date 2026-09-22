@@ -18,7 +18,7 @@ public class HotelRepository : IHotelRepository
         var searchQuery = _dbContext.Hotels.AsQueryable();
         if (!string.IsNullOrWhiteSpace(search))
         {
-           // searchQuery = searchQuery.Where(c => c.Name.Contains(search) || c.Country.Contains(search));
+            searchQuery = searchQuery.Where(h => h.Name.Contains(search) || h.OwnerName.Contains(search));
         }
         return await searchQuery.ToListAsync();
     }
@@ -30,7 +30,7 @@ public class HotelRepository : IHotelRepository
 
     public Task<Hotel?> GetHotelByIdAsync(int id)
     {
-        var hotel = _dbContext.Hotels.FirstOrDefaultAsync(c => c.HotelId == id);
+        var hotel = _dbContext.Hotels.FirstOrDefaultAsync(h => h.HotelId == id);
         return hotel;
     }
     
