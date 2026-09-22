@@ -34,7 +34,7 @@ public class RegisterService : IRegisterService
         var password = request.Password;
         var passwordHash = _passwordHasher.HashPassword(password);
 
-        var user = new User(request.FirstName, request.LastName, username, email, passwordHash);
+        var user = new User(request.FirstName, request.LastName, username, email, passwordHash, Role.Customer);
         
         _userRepository.Add(user);
         await _userRepository.SaveChangesAsync();

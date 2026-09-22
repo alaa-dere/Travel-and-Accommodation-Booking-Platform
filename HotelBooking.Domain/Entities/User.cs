@@ -11,7 +11,7 @@ public class User
     public Role Role { get; private set; }
     public DateTime CreatedAt { get; private set; }
 
-    public User(string firstName,string lastName, string username, string email, string passwordHash)
+    public User(string firstName,string lastName, string username, string email, string passwordHash, Role role)
     {
         if (string.IsNullOrWhiteSpace(firstName))
         {
@@ -43,8 +43,7 @@ public class User
         Username = username;
         Email = email;
         PasswordHash = passwordHash;
-        Role = Role.Customer;
+        Role = role;
         CreatedAt = DateTime.UtcNow;
     }
 }
-

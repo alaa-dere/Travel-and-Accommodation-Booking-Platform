@@ -11,6 +11,7 @@ using HotelBooking.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -73,6 +74,8 @@ builder.Services
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+
+await AdminSeeder.SeedAsync(app.Services);
 
 // HTTP Pipeline
 if (app.Environment.IsDevelopment())
