@@ -6,9 +6,9 @@ public class HotelResponseDto
 {
     public int HotelId { get; set; }
     public int CityId { get; set; }
-    public string Name { get; set; }
-    public string OwnerName { get; set; }
-    public string Address { get; set; }
+    public string Name { get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
+    public string Address { get; set; } = string.Empty;
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public HotelType HotelType { get; set; }

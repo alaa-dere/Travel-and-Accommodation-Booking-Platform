@@ -81,4 +81,10 @@ public class Hotel
         UpdatedAt = DateTime.UtcNow;
         CityId = cityId;
     }
+
+    public void ChangeStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

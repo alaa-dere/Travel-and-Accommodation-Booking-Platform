@@ -1,4 +1,5 @@
 using HotelBooking.Application.Hotels.Create;
+using HotelBooking.Application.Hotels.Delete;
 using HotelBooking.Application.Hotels.Dtos;
 using HotelBooking.Application.Hotels.Retrive;
 using HotelBooking.Application.Hotels.Update;
@@ -15,11 +16,13 @@ public class HotelsController : ControllerBase
     private readonly ICreateHotelService _createHotelService;
     private readonly IGetAllHotelsService _getAllHotelsService;
     private readonly IUpdateHotelService _updateHotelService;
-    public HotelsController(ICreateHotelService  createHotelService, IGetAllHotelsService getAllHotelsService, IUpdateHotelService  updateHotelService)
+    private readonly IChangeHotelStatusService _changeHotelStatusService;
+    public HotelsController(ICreateHotelService createHotelService, IGetAllHotelsService getAllHotelsService, IUpdateHotelService updateHotelService, IChangeHotelStatusService changeHotelStatusService)
     {
         _createHotelService = createHotelService;
         _getAllHotelsService = getAllHotelsService;
         _updateHotelService = updateHotelService;
+        _changeHotelStatusService = changeHotelStatusService;
     }
     
     [HttpGet]
@@ -41,5 +44,12 @@ public class HotelsController : ControllerBase
     {
         var hotel = await _updateHotelService.UpdateHotelAsync(hotelId, request);
         return Ok(hotel);
+    }
+    
+   [HttpPatch("{hotelId}/status")]
+    public async Task<IActionResult> ChangeStatusAsync(int hotelId, ChangeHotelStatusRequest request)
+    { 
+        await _changeHotelStatusService.ChangeHotelStatusAsync(hotelId, request.IsActive);
+        return NoContent();
     }
 }
