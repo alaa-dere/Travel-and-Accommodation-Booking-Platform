@@ -75,6 +75,7 @@ builder.Services
 builder.Services.AddAuthorization();
 builder.Services.AddScoped<ICityRepository, CityRepository>();
 builder.Services.AddScoped<IGetAllCitiesService, GetAllCities>();
+builder.Services.AddScoped<ICreateCityService, CreateCity>();
 
 var app = builder.Build();
 

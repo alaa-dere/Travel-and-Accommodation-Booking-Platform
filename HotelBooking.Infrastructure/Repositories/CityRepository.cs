@@ -22,4 +22,14 @@ public class CityRepository : ICityRepository
         }
         return await searchQuery.ToListAsync();
     }
+
+    public void Add(City city)
+    {
+        _dbContext.Cities.Add(city);
+    }
+    
+    public async Task SaveChangesAsync()
+    {
+        await _dbContext.SaveChangesAsync();
+    }
 }

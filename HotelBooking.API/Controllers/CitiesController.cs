@@ -1,3 +1,4 @@
+using HotelBooking.Application.Cities;
 using HotelBooking.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -10,9 +11,12 @@ namespace HotelBooking.API.Controllers;
 public class CitiesController : ControllerBase
 {
     private readonly IGetAllCitiesService _getAllCitiesService;
-    public CitiesController(IGetAllCitiesService getAllCitiesService)
+    private readonly ICreateCityService _createCityService;
+
+    public CitiesController(IGetAllCitiesService getAllCitiesService, ICreateCityService  createCityService)
     {
         _getAllCitiesService = getAllCitiesService;
+        _createCityService = createCityService;
     }
 
     [HttpGet]
@@ -20,5 +24,12 @@ public class CitiesController : ControllerBase
     {
         var cities = await _getAllCitiesService.GetAllCitiesAsync(search);
         return Ok(cities);
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> PostAsync(CreateCityRequestDto request)
+    {
+        var city = await _createCityService.CreateCityAsync(request);
+        return Created("api/cities", city);
     }
 }
