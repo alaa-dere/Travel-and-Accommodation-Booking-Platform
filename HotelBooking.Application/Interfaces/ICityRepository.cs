@@ -8,4 +8,6 @@ public interface ICityRepository
     void Add(City city);
     Task SaveChangesAsync();
     Task<City?> GetCityByIdAsync(int id);
+    Task<bool> HasHotelsAsync(int id);
+    void DeleteCity(City city);
 }

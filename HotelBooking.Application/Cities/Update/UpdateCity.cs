@@ -1,3 +1,4 @@
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
 
@@ -17,7 +18,7 @@ public class UpdateCity : IUpdateCityService
         var city = await _cityRepository.GetCityByIdAsync(id);
         if (city == null)
         {
-            throw new ArgumentException("City doesn't exist");
+            throw new NotFoundException("City doesn't exist");
         }
         
         city.Update(request.Name, request.Country, request.PostOffice);

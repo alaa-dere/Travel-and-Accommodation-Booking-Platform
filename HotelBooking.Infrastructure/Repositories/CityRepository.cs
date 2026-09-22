@@ -38,4 +38,12 @@ public class CityRepository : ICityRepository
     {
         await _dbContext.SaveChangesAsync();
     }
+    
+    public Task<bool> HasHotelsAsync(int cityId){
+        return _dbContext.Hotels.AnyAsync(h => h.CityId == cityId);
+    }
+    
+    public void DeleteCity(City city){
+        _dbContext.Cities.Remove(city);
+    }
 }

@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HotelBooking.Application.Cities;
+using HotelBooking.Application.Cities.Delete;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
@@ -77,6 +78,7 @@ builder.Services.AddScoped<ICityRepository, CityRepository>();
 builder.Services.AddScoped<IGetAllCitiesService, GetAllCities>();
 builder.Services.AddScoped<ICreateCityService, CreateCity>();
 builder.Services.AddScoped<IUpdateCityService, UpdateCity>();
+builder.Services.AddScoped<IDeleteCityService, DeleteCity>();
 
 var app = builder.Build();
 
