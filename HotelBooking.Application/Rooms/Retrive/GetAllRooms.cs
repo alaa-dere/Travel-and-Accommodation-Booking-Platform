@@ -1,0 +1,32 @@
+using HotelBooking.Application.Interfaces;
+using HotelBooking.Application.Rooms.Dtos;
+
+namespace HotelBooking.Application.Rooms.Retrive;
+
+public class GetAllRooms : IGetAllRoomsService
+{
+    private readonly IRoomRepository _roomRepository;
+
+    public GetAllRooms(IRoomRepository roomRepository)
+    {
+        _roomRepository = roomRepository;
+    }
+
+    public async Task<IEnumerable<RoomResponseDto>> GetAllRoomsAsync(string? search)
+    {
+        var rooms = await _roomRepository.GetRoomsAsync(search);
+        var results = rooms.Select(room => new RoomResponseDto()
+        {
+            RoomId = room.RoomId,
+            HotelId = room.HotelId,
+            RoomNumber =  room.RoomNumber,
+            RoomType = room.RoomType,
+            AdultsCapacity = room.AdultsCapacity,
+            ChildCapacity = room.ChildCapacity,
+            PricePerNight = room.PricePerNight,
+            IsOperationallyAvailable = room.IsOperationallyAvailable,
+            IsActive = room.IsActive,
+        });
+        return results;
+    }
+}

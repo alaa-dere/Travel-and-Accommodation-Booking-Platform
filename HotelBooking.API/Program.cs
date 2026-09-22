@@ -17,6 +17,7 @@ using HotelBooking.Application.Hotels.Delete;
 using HotelBooking.Application.Hotels.Retrive;
 using HotelBooking.Application.Hotels.Update;
 using HotelBooking.Application.Rooms.Create;
+using HotelBooking.Application.Rooms.Retrive;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
@@ -89,6 +90,7 @@ builder.Services.AddScoped<IUpdateHotelService, UpdateHotel>();
 builder.Services.AddScoped<IChangeHotelStatusService, ChangeHotelStatus>();
 builder.Services.AddScoped<IRoomRepository, RoomRepository>();
 builder.Services.AddScoped<ICreateRoomService, CreateRoom>();
+builder.Services.AddScoped<IGetAllRoomsService, GetAllRooms>();
 
 var app = builder.Build();
 

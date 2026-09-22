@@ -1,5 +1,6 @@
 using HotelBooking.Application.Rooms.Create;
 using HotelBooking.Application.Rooms.Dtos;
+using HotelBooking.Application.Rooms.Retrive;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -10,19 +11,20 @@ namespace HotelBooking.API.Controllers;
 [Authorize(Roles =  "Admin")]
 public class RoomsController : ControllerBase
 {
-    //private readonly IGetAllRoomsService _getAllRoomsService;
+    private readonly IGetAllRoomsService _getAllRoomsService;
     private readonly ICreateRoomService _createRoomService;
-    public RoomsController(ICreateRoomService  createRoomService)
+    public RoomsController(ICreateRoomService  createRoomService, IGetAllRoomsService  getAllRoomsService)
     {
         _createRoomService = createRoomService;
+        _getAllRoomsService = getAllRoomsService;
     }
     
-    // [HttpGet]
-    // public async Task<IActionResult> GetAsync([FromQuery] string? search)
-    // {
-    //     var rooms = await _getAllRoomsService.GetAllRoomsAsync(search);
-    //     return Ok(rooms);
-    // }
+    [HttpGet]
+    public async Task<IActionResult> GetAsync([FromQuery] string? search)
+    {
+        var rooms = await _getAllRoomsService.GetAllRoomsAsync(search);
+        return Ok(rooms);
+    }
     
     [HttpPost]
     public async Task<IActionResult> CreateRoomAsync(RoomRequestDto request)
