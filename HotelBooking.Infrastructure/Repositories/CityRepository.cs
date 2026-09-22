@@ -27,6 +27,12 @@ public class CityRepository : ICityRepository
     {
         _dbContext.Cities.Add(city);
     }
+
+    public Task<City?> GetCityByIdAsync(int id)
+    {
+        var city = _dbContext.Cities.FirstOrDefaultAsync(c => c.CityId == id);
+        return city;
+    }
     
     public async Task SaveChangesAsync()
     {

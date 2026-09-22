@@ -4,5 +4,5 @@ namespace HotelBooking.Application.Interfaces;
 
 public interface ICreateCityService
 {
-    Task<CityResponseDto> CreateCityAsync(CreateCityRequestDto request);
+    Task<CityResponseDto> CreateCityAsync(CityRequestDto request);
 }

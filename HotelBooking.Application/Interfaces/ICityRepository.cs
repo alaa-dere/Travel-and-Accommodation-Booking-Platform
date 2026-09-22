@@ -7,4 +7,5 @@ public interface ICityRepository
     Task<IEnumerable<City>> GetCitiesAsync(string? search);
     void Add(City city);
     Task SaveChangesAsync();
+    Task<City?> GetCityByIdAsync(int id);
 }

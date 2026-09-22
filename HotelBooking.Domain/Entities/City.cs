@@ -27,4 +27,22 @@ public class City
         PostOffice = postOffice;
         CreatedAt = DateTime.UtcNow;
     }
+    
+    public void Update(string name, string country, string postOffice)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("City name is required", nameof(name));
+        }
+
+        if (string.IsNullOrWhiteSpace(country))
+        {
+            throw new ArgumentException("City country is required", nameof(country));
+        }
+
+        Name = name;
+        Country = country;
+        PostOffice = postOffice;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

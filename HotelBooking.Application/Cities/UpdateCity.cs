@@ -3,19 +3,24 @@ using HotelBooking.Domain.Entities;
 
 namespace HotelBooking.Application.Cities;
 
-public class CreateCity : ICreateCityService
+public class UpdateCity : IUpdateCityService
 {
     private readonly ICityRepository _cityRepository;
 
-    public CreateCity(ICityRepository cityRepository)
+    public UpdateCity(ICityRepository cityRepository)
     {
         _cityRepository = cityRepository;
     }
     
-    public async Task<CityResponseDto> CreateCityAsync(CityRequestDto request)
+    public async Task<CityResponseDto> UpdateCityAsync(int id, CityRequestDto request)
     {
-        var city = new City (request.Name, request.Country, request.PostOffice);
-        _cityRepository.Add(city);
+        var city = await _cityRepository.GetCityByIdAsync(id);
+        if (city == null)
+        {
+            throw new ArgumentException("City doesn't exist");
+        }
+        
+        city.Update(request.Name, request.Country, request.PostOffice);
         await _cityRepository.SaveChangesAsync();
         
         var response = new CityResponseDto{CityId = city.CityId, Name = city.Name, Country = city.Country, PostOffice =  city.PostOffice };

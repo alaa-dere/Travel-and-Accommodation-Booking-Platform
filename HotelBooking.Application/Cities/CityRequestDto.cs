@@ -2,7 +2,7 @@ using System.ComponentModel.DataAnnotations;
 
 namespace HotelBooking.Application.Cities;
 
-public class CreateCityRequestDto
+public class CityRequestDto
 {
     [Required]
     [MaxLength(50)]
