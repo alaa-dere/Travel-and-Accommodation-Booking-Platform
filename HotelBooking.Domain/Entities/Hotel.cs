@@ -50,4 +50,35 @@ public class Hotel
         CreatedAt = DateTime.UtcNow;
         CityId = cityId;
     }
+    
+    public void Update(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name is required", nameof(name));
+        }
+
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            throw new ArgumentException("OwnerName is required", nameof(ownerName));
+        }
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            throw new ArgumentException("Address is required", nameof(address));
+        }
+
+        if (cityId <= 0)
+        {
+            throw new ArgumentException("CityId should be positive", nameof(cityId));
+        }
+        Name = name ;
+        OwnerName = ownerName ;
+        Address = address ;
+        Latitude = latitude;
+        Longitude = longitude;
+        HotelType = hotelType;
+        UpdatedAt = DateTime.UtcNow;
+        CityId = cityId;
+    }
 }
