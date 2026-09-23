@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HotelBooking.Application.Cities;
 using HotelBooking.Application.Cities.Delete;
+using HotelBooking.Application.Hotels.Create;
 using HotelBooking.Application.Hotels.Delete;
 using HotelBooking.Application.Hotels.Retrive;
 using HotelBooking.Application.Hotels.Update;
@@ -95,6 +96,7 @@ builder.Services.AddScoped<ICreateRoomService, CreateRoom>();
 builder.Services.AddScoped<IGetAllRoomsService, GetAllRooms>();
 builder.Services.AddScoped<IChangeRoomStatusService , ChangeRoomStatus>();
 builder.Services.AddScoped<IUpdateRoomService, UpdateRoom>();
+builder.Services.AddScoped<ICreateHotelService, CreateHotel>();
 
 var app = builder.Build();
 
