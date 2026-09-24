@@ -10,4 +10,8 @@
       <ProjectReference Include="..\HotelBooking.Domain\HotelBooking.Domain.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <PackageReference Include="Riok.Mapperly" Version="4.3.1" />
+    </ItemGroup>
+
 </Project>
