@@ -15,6 +15,7 @@ using HotelBooking.Application;
 using HotelBooking.Application.Cities;
 using HotelBooking.Application.Cities.Delete;
 using HotelBooking.Application.FeatureDeals;
+using HotelBooking.Application.HotelDetails;
 using HotelBooking.Application.Hotels.Create;
 using HotelBooking.Application.Hotels.Delete;
 using HotelBooking.Application.Hotels.Retrive;
@@ -105,6 +106,7 @@ builder.Services.AddScoped<ISearchHotelsService, SearchHotels>();
 builder.Services.AddScoped<IHotelSearchRepository, HotelSearchRepository>();
 builder.Services.AddScoped<IFeaturedDealsRepository , FeaturedDealsRepository>();
 builder.Services.AddScoped<IFeaturedDealsService, GetFeaturedDealsService>();
+builder.Services.AddScoped<IGetHotelDetailsService , GetHotelDetails>();
 
 var app = builder.Build();
 

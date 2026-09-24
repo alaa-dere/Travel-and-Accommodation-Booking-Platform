@@ -1,3 +1,4 @@
+using HotelBooking.Application.HotelDetails.Dtos;
 using HotelBooking.Domain.Entities;
 
 namespace HotelBooking.Application.Interfaces;
@@ -8,5 +9,6 @@ public interface IHotelRepository
     void Add(Hotel hotel);
     Task SaveChangesAsync();
     Task<Hotel?> GetHotelByIdAsync(int id);
-    void DeleteHotel(Hotel city);
+    void DeleteHotel(Hotel hotel);
+    Task<HotelDetailsResponseDto?> GetHotelDetailsAsync(int id);
 }

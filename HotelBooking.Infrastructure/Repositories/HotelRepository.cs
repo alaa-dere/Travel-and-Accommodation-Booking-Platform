@@ -1,3 +1,4 @@
+using HotelBooking.Application.HotelDetails.Dtos;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
 using HotelBooking.Infrastructure.Persistence;
@@ -41,5 +42,32 @@ public class HotelRepository : IHotelRepository
     
     public void DeleteHotel(Hotel hotel){
         _dbContext.Hotels.Remove(hotel);
+    }
+
+    public Task<HotelDetailsResponseDto?> GetHotelDetailsAsync(int id)
+    {
+       return _dbContext.Hotels.AsNoTracking()
+           .Where(hotel => hotel.IsActive && hotel.HotelId == id)
+           .Select(hotel => new HotelDetailsResponseDto
+            {
+                HotelId = hotel.HotelId,
+                Name = hotel.Name,
+                Description = hotel.Description,
+                History = hotel.History,
+                HotelType = hotel.HotelType,
+                Address = hotel.Address,
+                Latitude = hotel.Latitude,
+                Longitude = hotel.Longitude,
+                City = hotel.City.Name,
+                Amenities = hotel.HotelAmenities.Select(amenity => new AmenityResponseDto
+                {
+                    Name = amenity.Amenity.Name,
+                    Description = amenity.Amenity.Description
+                }).ToList(),
+                
+                Rating = hotel.Rooms.SelectMany(room => room.Bookings)
+                    .Where(booking => booking.Review != null)
+                    .Average(booking => (int?)booking.Review!.Rating)
+            }).FirstOrDefaultAsync();
     }
 }
