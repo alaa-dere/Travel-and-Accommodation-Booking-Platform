@@ -17,7 +17,7 @@ public class SearchHotels : ISearchHotelsService
     {
         ValidateRequest(request);
 
-        var candidateHotels = await _hotelSearchRepository.GetCandidateHotelsAsync(request.Destination, request.CheckIn, request.CheckOut, request.Rooms, request.Adults, request.Children);
+        var candidateHotels = await _hotelSearchRepository.GetCandidateHotelsAsync(request);
         return candidateHotels.Select(MapToResponse);
     }
 
@@ -47,10 +47,37 @@ public class SearchHotels : ISearchHotelsService
         {
             throw new BadRequestException("Number of rooms must be at least 1.");
         }
+        
+        if (request.MinPrice.HasValue && request.MinPrice.Value < 0)
+        {
+            throw new BadRequestException("Min price cannot be negative.");
+        }
+
+        if (request.MaxPrice.HasValue && request.MaxPrice.Value < 0)
+        {
+            throw new BadRequestException("Max price cannot be negative.");
+        }
+
+        if (request.MinPrice.HasValue && request.MaxPrice.HasValue && request.MinPrice.Value > request.MaxPrice.Value)
+        {
+            throw new BadRequestException("Min price cannot be greater than max price.");
+        }
+
+        if (request.MinRating.HasValue && (request.MinRating.Value < 1 || request.MinRating.Value > 5))
+        {
+            throw new BadRequestException("Min rating must be between 1 and 5.");
+        }
+
+        if (request.AmenityIds != null && request.AmenityIds.Any(id => id <= 0))
+        {
+            throw new BadRequestException("Amenity IDs must be greater than zero.");
+        }
+        
     }
 
-    private static HotelSearchResponseDto MapToResponse(Hotel hotel)
+    private static HotelSearchResponseDto MapToResponse(HotelSearchResult result)
     {
+        var hotel = result.Hotel;
         return new HotelSearchResponseDto
         {
             HotelId = hotel.HotelId,
@@ -58,7 +85,8 @@ public class SearchHotels : ISearchHotelsService
             City = hotel.City.Name,
             Address = hotel.Address,
             HotelType = hotel.HotelType,
-            StartingPrice = hotel.Rooms.Min(room => room.PricePerNight)
+            StartingPrice = hotel.Rooms.Min(room => room.PricePerNight),
+            Rating = result.Rating
         };
     }
 }

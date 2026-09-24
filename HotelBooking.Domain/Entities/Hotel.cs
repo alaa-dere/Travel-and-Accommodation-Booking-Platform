@@ -19,6 +19,7 @@ public class Hotel
     public ICollection<Room> Rooms { get; set; } = new List<Room>();
     public ICollection<HotelImage> HotelImages { get; set; } = new List<HotelImage>();
     public ICollection<Promotion> Promotions { get; set; } = new List<Promotion>();
+    public ICollection<HotelAmenity> HotelAmenities  { get; set; } = new List<HotelAmenity>();
     
     public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId)
     {

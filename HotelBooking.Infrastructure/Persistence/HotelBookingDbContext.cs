@@ -18,6 +18,8 @@ public class HotelBookingDbContext : DbContext
     public DbSet<Booking> Bookings { get; set; }
     public DbSet<Promotion> Promotions { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<HotelAmenity> HotelAmenities { get; set; }
+    public DbSet<Amenity> Amenities { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
