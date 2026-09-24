@@ -1,3 +1,4 @@
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.HotelDetails.Dtos;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
@@ -69,5 +70,10 @@ public class HotelRepository : IHotelRepository
                     .Where(booking => booking.Review != null)
                     .Average(booking => (int?)booking.Review!.Rating)
             }).FirstOrDefaultAsync();
+    }
+
+    public Task<bool> IsActiveHotelAsync(int hotelId)
+    {
+        return _dbContext.Hotels.AnyAsync(hotel => hotel.HotelId == hotelId && hotel.IsActive);
     }
 }
