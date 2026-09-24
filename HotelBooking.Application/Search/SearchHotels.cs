@@ -1,6 +1,6 @@
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Search.Dtos;
-using HotelBooking.Domain.Entities;
 
 namespace HotelBooking.Application.Search;
 
@@ -13,12 +13,17 @@ public class SearchHotels : ISearchHotelsService
         _hotelSearchRepository = hotelSearchRepository;
     }
 
-    public async Task<IEnumerable<HotelSearchResponseDto>> SearchHotelsAsync(HotelSearchRequestDto request)
+    public async Task<PagedResult<HotelSearchResponseDto>> SearchHotelsAsync(HotelSearchRequestDto request)
     {
         ValidateRequest(request);
 
         var candidateHotels = await _hotelSearchRepository.GetCandidateHotelsAsync(request);
-        return candidateHotels.Select(MapToResponse);
+        return new PagedResult<HotelSearchResponseDto>
+        {
+            Items = candidateHotels.Items.Select(MapToResponse),
+            PageNumber = candidateHotels.PageNumber,
+            HasNextPage = candidateHotels.HasNextPage
+        };
     }
 
     private static void ValidateRequest(HotelSearchRequestDto request)
@@ -73,6 +78,11 @@ public class SearchHotels : ISearchHotelsService
             throw new BadRequestException("Amenity IDs must be greater than zero.");
         }
         
+        if(request.PageNumber < 1)
+        {
+            throw new BadRequestException("PageNumber must be greater than zero.");
+        }
+        
     }
 
     private static HotelSearchResponseDto MapToResponse(HotelSearchResult result)
@@ -86,7 +96,9 @@ public class SearchHotels : ISearchHotelsService
             Address = hotel.Address,
             HotelType = hotel.HotelType,
             StartingPrice = hotel.Rooms.Min(room => room.PricePerNight),
-            Rating = result.Rating
+            Rating = result.Rating,
+            ThumbnailUrl = result.ThumbnailUrl,
+            BriefDescription = hotel.Description
         };
     }
 }

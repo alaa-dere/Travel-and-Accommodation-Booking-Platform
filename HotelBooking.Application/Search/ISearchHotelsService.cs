@@ -1,6 +1,8 @@
+using HotelBooking.Application.Common;
+
 namespace HotelBooking.Application.Search.Dtos;
 
 public interface ISearchHotelsService
 {
-    Task<IEnumerable<HotelSearchResponseDto>> SearchHotelsAsync(HotelSearchRequestDto request);
+    Task<PagedResult<HotelSearchResponseDto>> SearchHotelsAsync(HotelSearchRequestDto request);
 }

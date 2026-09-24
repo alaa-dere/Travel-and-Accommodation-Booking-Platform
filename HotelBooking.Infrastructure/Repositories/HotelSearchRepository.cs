@@ -1,4 +1,5 @@
 using HotelBooking.Application;
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Search;
 using HotelBooking.Application.Search.Dtos;
 using HotelBooking.Domain.Entities;
@@ -16,7 +17,7 @@ public class HotelSearchRepository : IHotelSearchRepository
         _dbContext = dbContext;
     }
 
-   public async Task<IEnumerable<HotelSearchResult>> GetCandidateHotelsAsync(HotelSearchRequestDto request)
+   public async Task<PagedResult<HotelSearchResult>> GetCandidateHotelsAsync(HotelSearchRequestDto request)
 {
     var searchTerm = $"%{request.Destination.Trim()}%";
 
@@ -77,13 +78,31 @@ public class HotelSearchRepository : IHotelSearchRepository
             >= request.MinRating.Value);
     }
 
-    return await query.Select(hotel => new HotelSearchResult
+    const int pageSize = 10;
+    var skip = (request.PageNumber - 1) * pageSize;
+    var results = await query.OrderBy(hotel => hotel.HotelId).Skip(skip).Take(pageSize + 1).Select(hotel => new HotelSearchResult
+        {
+            Hotel = hotel,
+            Rating = hotel.Rooms
+                .SelectMany(room => room.Bookings)
+                .Where(booking => booking.Review != null)
+                .Average(booking => (double?)booking.Review!.Rating),
+            
+            ThumbnailUrl = hotel.HotelImages
+                .OrderBy(image => image.DisplayOrder)
+                .Select(image => image.ImageUrl)
+                .FirstOrDefault()
+        })
+        .ToListAsync();
+
+    var hasNextPage = results.Count > pageSize;
+    var items = results.Take(pageSize);
+
+    return new PagedResult<HotelSearchResult>
     {
-        Hotel = hotel,
-        Rating = hotel.Rooms
-            .SelectMany(room => room.Bookings)
-            .Where(booking => booking.Review != null)
-            .Average(booking => (double?)booking.Review!.Rating)
-    }).ToListAsync();
+        Items = items,
+        PageNumber = request.PageNumber,
+        HasNextPage = hasNextPage
+    };
 }
 }

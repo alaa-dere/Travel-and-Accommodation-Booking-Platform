@@ -9,4 +9,6 @@ public class HotelSearchResponseDto
     public HotelType HotelType { get; set; }
     public decimal StartingPrice { get; set; }
     public double? Rating { get; set; }
+    public string? ThumbnailUrl { get; set; }
+    public string? BriefDescription { get; set; }
 }

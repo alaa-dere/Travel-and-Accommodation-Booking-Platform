@@ -16,4 +16,5 @@ public class HotelSearchRequestDto
     public List<int>? AmenityIds  { get; set; }
     public HotelType? HotelType { get; set; }
     public RoomType? RoomType { get; set; }
+    public int PageNumber { get; set; } = 1;
 }
