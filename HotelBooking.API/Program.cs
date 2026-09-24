@@ -12,6 +12,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HotelBooking.Application;
+using HotelBooking.Application.AvailableRooms;
 using HotelBooking.Application.Cities;
 using HotelBooking.Application.Cities.Delete;
 using HotelBooking.Application.FeatureDeals;
@@ -110,6 +111,8 @@ builder.Services.AddScoped<IFeaturedDealsService, GetFeaturedDealsService>();
 builder.Services.AddScoped<IGetHotelDetailsService , GetHotelDetails>();
 builder.Services.AddScoped<IHotelImageRepository, HotelImageRepository>();
 builder.Services.AddScoped<IGetHotelImagesService, GetHotelImages>();
+builder.Services.AddScoped<IAvailableRoomRepository, AvailableRoomRepository>();
+builder.Services.AddScoped<IGetAvailableRoomsService, GetAvailableRooms>();
 
 var app = builder.Build();
 
