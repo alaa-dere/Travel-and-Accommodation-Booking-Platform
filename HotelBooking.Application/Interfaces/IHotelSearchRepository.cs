@@ -8,6 +8,5 @@ namespace HotelBooking.Application;
 public interface IHotelSearchRepository
 {
     Task<PagedResult<HotelSearchResult>> GetCandidateHotelsAsync(HotelSearchRequestDto request);
-    
 }
     

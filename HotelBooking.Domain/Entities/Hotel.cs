@@ -21,7 +21,7 @@ public class Hotel
     public ICollection<Promotion> Promotions { get; set; } = new List<Promotion>();
     public ICollection<HotelAmenity> HotelAmenities  { get; set; } = new List<HotelAmenity>();
     
-    public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId)
+    public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId,string? description,string? history)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -42,6 +42,7 @@ public class Hotel
         {
             throw new ArgumentException("CityId should be positive", nameof(cityId));
         }
+        
         Name = name ;
         OwnerName = ownerName ;
         Address = address ;
@@ -51,9 +52,11 @@ public class Hotel
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
         CityId = cityId;
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        History = string.IsNullOrWhiteSpace(history) ? null : history.Trim();
     }
     
-    public void Update(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId)
+    public void Update(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId,string? description,string? history)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -82,6 +85,8 @@ public class Hotel
         HotelType = hotelType;
         UpdatedAt = DateTime.UtcNow;
         CityId = cityId;
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+        History = string.IsNullOrWhiteSpace(history) ? null : history.Trim();
     }
 
     public void ChangeStatus(bool isActive)

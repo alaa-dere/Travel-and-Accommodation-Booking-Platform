@@ -12,4 +12,6 @@ public class HotelResponseDto
     public double Latitude { get; set; }
     public double Longitude { get; set; }
     public HotelType HotelType { get; set; }
+    public string? Description { get; set; } 
+    public string? History { get; set; } 
 }

@@ -29,10 +29,21 @@ public class UpdateHotel : IUpdateHotelService
             throw new NotFoundException("City does not exist");
         }
         
-        hotel.Update(request.Name, request.OwnerName, request.Address, request.Latitude, request.Longitude, request.HotelType, request.CityId);
+        hotel.Update(request.Name, request.OwnerName, request.Address, request.Latitude, request.Longitude, request.HotelType, request.CityId,request.Description,request.History);
         await _hotelRepository.SaveChangesAsync();
         
-        var response = new HotelResponseDto{HotelId = hotel.HotelId,CityId = hotel.CityId, Name = hotel.Name,OwnerName =  hotel.OwnerName,Address = hotel.Address,  Latitude = hotel.Latitude,Longitude = hotel.Longitude, HotelType = hotel.HotelType};
+        var response = new HotelResponseDto
+            {HotelId = hotel.HotelId,
+                CityId = hotel.CityId,
+                Name = hotel.Name,
+                OwnerName =  hotel.OwnerName,
+                Address = hotel.Address,  
+                Latitude = hotel.Latitude,
+                Longitude = hotel.Longitude, 
+                HotelType = hotel.HotelType,
+                Description = hotel.Description,
+                History = hotel.History
+            };
         return response;
     }
 }
