@@ -16,9 +16,9 @@ public class Booking
     public DateTime? UpdatedAt { get; set; }
     public User? User { get; set; }
     public Room? Room { get; set; }
+    public Review? Review { get; set; }
 
-    public Booking(int userId, int roomId, DateTime checkIn, DateTime checkOut, int adults, int children,
-        decimal pricePerNight, decimal totalPrice)
+    public Booking(int userId, int roomId, DateTime checkIn, DateTime checkOut, int adults, int children, decimal pricePerNight, decimal totalPrice)
     {
         if (userId <= 0)
         {
