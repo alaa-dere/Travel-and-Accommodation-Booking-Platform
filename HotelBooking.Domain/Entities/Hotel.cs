@@ -15,7 +15,7 @@ public class Hotel
     public bool IsActive { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
-    public City? City { get; set; }
+    public City City { get; set; } = null!;
     public ICollection<Room> Rooms { get; set; } = new List<Room>();
     public ICollection<HotelImage> HotelImages { get; set; } = new List<HotelImage>();
     

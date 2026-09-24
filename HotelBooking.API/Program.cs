@@ -11,6 +11,7 @@ using HotelBooking.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using HotelBooking.Application;
 using HotelBooking.Application.Cities;
 using HotelBooking.Application.Cities.Delete;
 using HotelBooking.Application.Hotels.Create;
@@ -21,6 +22,8 @@ using HotelBooking.Application.Rooms.Create;
 using HotelBooking.Application.Rooms.Delete;
 using HotelBooking.Application.Rooms.Retrive;
 using HotelBooking.Application.Rooms.Update;
+using HotelBooking.Application.Search;
+using HotelBooking.Application.Search.Dtos;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
@@ -97,6 +100,8 @@ builder.Services.AddScoped<IGetAllRoomsService, GetAllRooms>();
 builder.Services.AddScoped<IChangeRoomStatusService , ChangeRoomStatus>();
 builder.Services.AddScoped<IUpdateRoomService, UpdateRoom>();
 builder.Services.AddScoped<ICreateHotelService, CreateHotel>();
+builder.Services.AddScoped<ISearchHotelsService, SearchHotels>();
+builder.Services.AddScoped<IHotelSearchRepository, HotelSearchRepository>();
 
 var app = builder.Build();
 

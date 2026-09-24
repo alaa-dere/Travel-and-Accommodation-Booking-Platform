@@ -27,6 +27,13 @@ public class GlobalExceptionHandler : IExceptionHandler
             await httpContext.Response.WriteAsJsonAsync(new { message = exception.Message }, cancellationToken);
             return true;
         }
+        
+        if (exception is BadRequestException)
+        {
+            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
+            await httpContext.Response.WriteAsJsonAsync(new { message = exception.Message }, cancellationToken);
+            return true;
+        }
 
         return false;
     }

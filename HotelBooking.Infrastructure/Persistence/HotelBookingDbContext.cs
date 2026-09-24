@@ -15,6 +15,7 @@ public class HotelBookingDbContext : DbContext
     public DbSet<Hotel> Hotels { get; set; }
     public DbSet<HotelImage> HotelImages { get; set; }
     public DbSet<RoomImage> RoomImages { get; set; }
+    public DbSet<Booking> Bookings { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
