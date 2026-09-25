@@ -30,10 +30,20 @@ public class CreateBookingsService : ICreateBookingsService
         _transactionManager = transactionManager;
     }
 
-   public async Task<BookingCreationResultDto> CreateBookingsAsync(int userId)
-{
+    public async Task<BookingCreationResultDto> CreateBookingsAsync(int userId, string? specialRequests)
+    {
     var bookingCount = 0;
     var invoiceCount = 0;
+    
+    if (userId <= 0)
+    {
+        throw new BadRequestException("Invalid user ID.");
+    }
+
+    if (specialRequests?.Length > 1000)
+    {
+        throw new BadRequestException("Special requests cannot exceed 1000 characters.");
+    }
 
     await _transactionManager.ExecuteSerializableAsync(async () =>
     {
@@ -72,7 +82,8 @@ public class CreateBookingsService : ICreateBookingsService
                     price.OriginalTotalPrice,
                     price.DiscountPercentage,
                     price.DiscountAmount,
-                    price.TotalPrice);
+                    price.TotalPrice,
+                    specialRequests);
                 pricedBookings.Add(booking);
             }
 

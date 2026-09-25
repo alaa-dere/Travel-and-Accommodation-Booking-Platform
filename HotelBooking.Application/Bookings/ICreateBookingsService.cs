@@ -4,5 +4,4 @@ namespace HotelBooking.Application.Bookings;
 
 public interface ICreateBookingsService
 {
-    Task<BookingCreationResultDto> CreateBookingsAsync(int userId);
-}
+    Task<BookingCreationResultDto> CreateBookingsAsync(int userId, string? specialRequests);}

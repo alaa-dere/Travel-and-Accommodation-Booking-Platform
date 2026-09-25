@@ -18,12 +18,13 @@ public class Booking
     public BookingStatus BookingStatus  { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
+    public string? SpecialRequests { get; set; }
     public User? User { get; set; }
     public Room? Room { get; set; }
     public Review? Review { get; set; }
     public Invoice? Invoice { get; set; }
 
-    public Booking(int userId, int roomId, DateTime checkIn, DateTime checkOut, int adults, int children, decimal pricePerNight, decimal originalTotalPrice, int discountPercentage, decimal discountAmount, decimal totalPrice)
+    public Booking(int userId, int roomId, DateTime checkIn, DateTime checkOut, int adults, int children, decimal pricePerNight, decimal originalTotalPrice, int discountPercentage, decimal discountAmount, decimal totalPrice, string? specialRequests)
 {
     if (userId <= 0)
     {
@@ -75,6 +76,11 @@ public class Booking
         throw new ArgumentOutOfRangeException(nameof(totalPrice), "Total price must be greater than zero.");
     }
     
+    if (specialRequests?.Length > 1000)
+    {
+        throw new ArgumentException("Special requests cannot exceed 1000 characters.", nameof(specialRequests));
+    }
+    
     UserId = userId;
     RoomId = roomId;
     CheckIn = checkIn;
@@ -88,5 +94,6 @@ public class Booking
     TotalPrice = totalPrice;
     BookingStatus = BookingStatus.Pending;
     CreatedAt = DateTime.UtcNow;
+    SpecialRequests = specialRequests;
 }
 }
