@@ -1,0 +1,29 @@
+using HotelBooking.Application.Exceptions;
+using HotelBooking.Application.Interfaces;
+
+namespace HotelBooking.Application.Bookings;
+
+public class BookingAvailabilityService : IBookingAvailabilityService
+{
+    private readonly IBookingRepository _bookingRepository;
+
+    public BookingAvailabilityService(IBookingRepository bookingRepository)
+    {
+        _bookingRepository = bookingRepository;
+    }
+
+    public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime checkIn, DateTime checkOut)
+    {
+        if (roomId <= 0)
+        {
+            throw new BadRequestException("Room ID must be greater than zero.");
+        }
+        if (checkOut <= checkIn)
+        {
+            throw new BadRequestException("Check-out date must be after check-in date.");
+        }
+        
+        var hasConflict = await _bookingRepository.HasConflictingBookingAsync(roomId, checkIn, checkOut);
+        return !hasConflict;
+    }
+}
