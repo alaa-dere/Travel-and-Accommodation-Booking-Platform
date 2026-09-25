@@ -40,6 +40,9 @@ using HotelBooking.Application.TrendingDestinations;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
+using HotelBooking.Application.Invoices;
+using HotelBooking.Infrastructure.Services;
+using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -155,9 +158,12 @@ builder.Services.AddScoped<IBookingTransactionManager, BookingTransactionManager
 builder.Services.AddScoped<ICreateBookingsService, CreateBookingsService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IGetInvoiceForPdfService, GetInvoiceForPdfService>();
+builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 
 var app = builder.Build();
 
+QuestPDF.Settings.License = LicenseType.Community;
 await AdminSeeder.SeedAsync(app.Services);
 
 // HTTP Pipeline

@@ -5,4 +5,5 @@ namespace HotelBooking.Application.Interfaces;
 public interface IInvoiceRepository
 {
     Task AddAsync(Invoice invoice);
+    Task<Invoice?> GetByIdForUserAsync(int invoiceId, int userId);
 }
