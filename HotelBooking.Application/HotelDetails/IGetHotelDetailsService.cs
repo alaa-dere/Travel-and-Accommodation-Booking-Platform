@@ -4,5 +4,5 @@ namespace HotelBooking.Application.HotelDetails;
 
 public interface IGetHotelDetailsService
 {
-    Task<HotelDetailsResponseDto> GetHotelDetailsAsync(int id);
+    Task<HotelDetailsResponseDto> GetHotelDetailsAsync(int hotelId, int userId);
 }

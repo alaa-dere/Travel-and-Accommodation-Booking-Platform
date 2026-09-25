@@ -19,14 +19,14 @@ public class AvailableRoomsController : ControllerBase
         _selectAvailableRoomService = selectAvailableRoomService;
     }
     
-    [HttpGet("{hotelId}/available-rooms")]
+    [HttpGet("{hotelId:int}/available-rooms")]
     public async Task<IActionResult> GetAvailableRoomsAsync(int hotelId, [FromQuery] AvailableRoomsRequestDto request)
     {
         var rooms = await _getAvailableRoomsService.GetAvailableRoomsAsync(hotelId, request);
         return Ok(rooms);
     }
-    
-    [HttpPost("{hotelId}/available-rooms/{roomId}/selection")]
+
+    [HttpPost("{hotelId:int}/available-rooms/{roomId:int}/selection")]
     public async Task<ActionResult<SelectedRoomResponseDto>> SelectRoom(int hotelId, int roomId, [FromBody] AvailableRoomsRequestDto request)
     {
         var result = await _selectAvailableRoomService.SelectRoomAsync(hotelId, roomId, request);

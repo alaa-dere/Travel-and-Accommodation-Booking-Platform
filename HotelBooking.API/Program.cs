@@ -24,6 +24,7 @@ using HotelBooking.Application.Hotels.Create;
 using HotelBooking.Application.Hotels.Delete;
 using HotelBooking.Application.Hotels.Retrive;
 using HotelBooking.Application.Hotels.Update;
+using HotelBooking.Application.RecentlyVisitedHotels;
 using HotelBooking.Application.Rooms.Create;
 using HotelBooking.Application.Rooms.Delete;
 using HotelBooking.Application.Rooms.Retrive;
@@ -120,6 +121,9 @@ builder.Services.AddScoped<IGetHotelReviewsService, GetHotelReviews>();
 builder.Services.AddScoped<IHotelLocationRepository, HotelLocationRepository>();
 builder.Services.AddScoped<IGetHotelLocationService, GetHotelLocationService>();
 builder.Services.AddScoped<ISelectAvailableRoomService, SelectAvailableRoom>();
+builder.Services.AddScoped<IRecentlyVisitedHotelRepository, RecentlyVisitedHotelRepository>();
+builder.Services.AddScoped<IRecordHotelVisitService, RecordHotelVisitService>();
+builder.Services.AddScoped<IGetRecentlyVisitedHotelsService, GetRecentlyVisitedHotelsService>();
 
 var app = builder.Build();
 

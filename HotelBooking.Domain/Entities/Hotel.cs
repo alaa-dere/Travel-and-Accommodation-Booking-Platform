@@ -21,6 +21,7 @@ public class Hotel
     public ICollection<Promotion> Promotions { get; set; } = new List<Promotion>();
     public ICollection<HotelAmenity> HotelAmenities  { get; set; } = new List<HotelAmenity>();
     public ICollection<NearbyAttraction> NearbyAttractions { get; set; } = new List<NearbyAttraction>();
+    public ICollection<RecentlyVisitedHotel> RecentlyVisitedHotels { get; set; } = new List<RecentlyVisitedHotel>();
     
     public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId,string? description,string? history)
     {

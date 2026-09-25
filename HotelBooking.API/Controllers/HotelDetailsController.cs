@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using HotelBooking.Application.HotelDetails;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -16,10 +17,15 @@ public class HotelDetailsController : ControllerBase
         _hotelDetailsService = hotelDetailsService;
     }
 
-    [HttpGet("{hotelId}")]
+    [HttpGet("{hotelId:int}")]
     public async Task<IActionResult> GetHotelDetailsAsync(int hotelId)
     {
-        var hotel = await _hotelDetailsService.GetHotelDetailsAsync(hotelId);
+        var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        if (!int.TryParse(userIdClaim, out var userId))
+        {
+            return Unauthorized();
+        }
+        var hotel = await _hotelDetailsService.GetHotelDetailsAsync(hotelId, userId);
         return Ok(hotel);
     }
 }

@@ -11,6 +11,7 @@ public class User
     public Role Role { get; private set; }
     public DateTime CreatedAt { get; private set; }
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public ICollection<RecentlyVisitedHotel> RecentlyVisitedHotels { get; set; } = new List<RecentlyVisitedHotel>();
 
     public User(string firstName,string lastName, string username, string email, string passwordHash, Role role)
     {
