@@ -63,6 +63,36 @@ public class AvailableRoomRepository : IAvailableRoomRepository
                         DisplayOrder = image.DisplayOrder
                     }).ToList()
             }).FirstOrDefaultAsync();
-            
+    }
+    
+    public async Task<AvailableRoomResponseDto?> GetAvailableRoomAsync(
+        int roomId,
+        DateTime checkIn,
+        DateTime checkOut,
+        int adults,
+        int children)
+    {
+        return await _dbContext.Rooms.AsNoTracking()
+            .Where(room => room.RoomId == roomId && room.IsActive && room.IsOperationallyAvailable && 
+                           room.Hotel!.IsActive && room.AdultsCapacity >= adults && room.ChildCapacity >= children &&
+                           !room.Bookings.Any(booking => booking.BookingStatus != BookingStatus.Cancelled &&
+                                                         booking.CheckIn < checkOut && booking.CheckOut > checkIn))
+            .Select(room => new AvailableRoomResponseDto
+            {
+                RoomId = room.RoomId,
+                RoomType = room.RoomType,
+                Description = room.Description,
+                AdultsCapacity = room.AdultsCapacity,
+                ChildCapacity = room.ChildCapacity,
+                PricePerNight = room.PricePerNight,
+
+                Images = room.RoomImages
+                    .OrderBy(image => image.DisplayOrder)
+                    .Select(image => new RoomImageResponseDto
+                    {
+                        ImageUrl = image.ImageUrl,
+                        DisplayOrder = image.DisplayOrder
+                    }).ToList()
+            }).FirstOrDefaultAsync();
     }
 }

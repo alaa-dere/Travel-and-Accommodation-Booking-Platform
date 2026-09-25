@@ -22,6 +22,7 @@ public class HotelBookingDbContext : DbContext
     public DbSet<Amenity> Amenities { get; set; }
     public DbSet<NearbyAttraction> NearbyAttractions  { get; set; }
     public DbSet<RecentlyVisitedHotel> RecentlyVisitedHotels { get; set; }
+    public DbSet<CartItem> CartItems { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

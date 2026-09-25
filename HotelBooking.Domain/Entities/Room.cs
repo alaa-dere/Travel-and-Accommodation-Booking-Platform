@@ -17,6 +17,7 @@ public class Room
     public Hotel? Hotel { get; set; }
     public ICollection<RoomImage> RoomImages { get; set; } = new List<RoomImage>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
     public Room(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId,  string? description)
     {

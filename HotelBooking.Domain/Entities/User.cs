@@ -12,6 +12,7 @@ public class User
     public DateTime CreatedAt { get; private set; }
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
     public ICollection<RecentlyVisitedHotel> RecentlyVisitedHotels { get; set; } = new List<RecentlyVisitedHotel>();
+    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
 
     public User(string firstName,string lastName, string username, string email, string passwordHash, Role role)
     {
