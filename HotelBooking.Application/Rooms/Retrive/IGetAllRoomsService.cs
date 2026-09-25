@@ -4,5 +4,5 @@ namespace HotelBooking.Application.Rooms.Retrive;
 
 public interface IGetAllRoomsService
 {
-    Task<IEnumerable<RoomResponseDto>> GetAllRoomsAsync(string? search);
+    Task<IEnumerable<RoomResponseDto>> GetAllRoomsAsync(RoomFilterDto filter);
 }

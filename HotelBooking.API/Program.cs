@@ -27,6 +27,7 @@ using HotelBooking.Application.Hotels.Update;
 using HotelBooking.Application.RecentlyVisitedHotels;
 using HotelBooking.Application.Rooms.Create;
 using HotelBooking.Application.Rooms.Delete;
+using HotelBooking.Application.Rooms.Images;
 using HotelBooking.Application.Rooms.Retrive;
 using HotelBooking.Application.Rooms.Update;
 using HotelBooking.Application.Search;
@@ -129,6 +130,9 @@ builder.Services.AddScoped<ITrendingDestinationRepository, TrendingDestinationRe
 builder.Services.AddScoped<IGetTrendingDestinationsService, GetTrendingDestinationsService>();
 builder.Services.AddScoped<ISubmitHotelReviewService, SubmitHotelReviewService>();
 builder.Services.AddScoped<IChangeRoomOperationalAvailabilityService, ChangeRoomOperationalAvailability>();
+builder.Services.AddScoped<IRoomImageRepository, RoomImageRepository>();
+builder.Services.AddScoped<IAddRoomImageService, AddRoomImageService>();
+builder.Services.AddScoped<IDeleteRoomImageService, DeleteRoomImageService>();
 
 var app = builder.Build();
 

@@ -5,6 +5,7 @@ using HotelBooking.Application.Rooms.Retrive;
 using HotelBooking.Application.Rooms.Update;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using HotelBooking.Application.Rooms.Images;
 
 namespace HotelBooking.API.Controllers;
 
@@ -18,19 +19,31 @@ public class RoomsController : ControllerBase
     private readonly IUpdateRoomService _updateRoomService;
     private readonly IChangeRoomStatusService _changeRoomStatusService;
     private readonly IChangeRoomOperationalAvailabilityService _changeRoomOperationalAvailabilityService;
-    public RoomsController(ICreateRoomService createRoomService, IGetAllRoomsService getAllRoomsService, IUpdateRoomService updateRoomlService, IChangeRoomStatusService  changeRoomStatusService , IChangeRoomOperationalAvailabilityService changeRoomOperationalAvailabilityService)
+    private readonly IAddRoomImageService _addRoomImageService;
+    private readonly IDeleteRoomImageService _deleteRoomImageService;
+    public RoomsController(
+        ICreateRoomService createRoomService, 
+        IGetAllRoomsService getAllRoomsService, 
+        IUpdateRoomService updateRoomlService, 
+        IChangeRoomStatusService  changeRoomStatusService , 
+        IChangeRoomOperationalAvailabilityService changeRoomOperationalAvailabilityService,
+        IAddRoomImageService addRoomImageService,
+        IDeleteRoomImageService deleteRoomImageService
+        )
     {
         _createRoomService = createRoomService;
         _getAllRoomsService = getAllRoomsService;
         _updateRoomService = updateRoomlService;
         _changeRoomStatusService = changeRoomStatusService;
         _changeRoomOperationalAvailabilityService = changeRoomOperationalAvailabilityService;
+        _addRoomImageService = addRoomImageService;
+        _deleteRoomImageService = deleteRoomImageService;
     }
     
     [HttpGet]
-    public async Task<IActionResult> GetAsync([FromQuery] string? search)
+    public async Task<IActionResult> GetAsync([FromQuery] RoomFilterDto filter)
     {
-        var rooms = await _getAllRoomsService.GetAllRoomsAsync(search);
+        var rooms = await _getAllRoomsService.GetAllRoomsAsync(filter);
         return Ok(rooms);
     }
     
@@ -59,6 +72,20 @@ public class RoomsController : ControllerBase
     public async Task<IActionResult> ChangeOperationalAvailabilityAsync(int roomId, ChangeRoomOperationalAvailabilityRequest request)
     {
         await _changeRoomOperationalAvailabilityService.ChangeOperationalAvailabilityAsync(roomId, request.IsOperationallyAvailable);
+        return NoContent();
+    }
+    
+    [HttpPost("{roomId:int}/images")]
+    public async Task<IActionResult> AddImageAsync(int roomId, AddRoomImageRequestDto request)
+    {
+        await _addRoomImageService.AddRoomImageAsync(roomId, request);
+        return NoContent();
+    }
+    
+    [HttpDelete("{roomId:int}/images/{imageId:int}")]
+    public async Task<IActionResult> DeleteImageAsync(int roomId, int imageId)
+    {
+        await _deleteRoomImageService.DeleteRoomImageAsync(roomId, imageId);
         return NoContent();
     }
 }

@@ -1,4 +1,5 @@
 using HotelBooking.Application.Interfaces;
+using HotelBooking.Application.Rooms.Dtos;
 using HotelBooking.Domain.Entities;
 using HotelBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -13,14 +14,36 @@ public class RoomRepository : IRoomRepository
         _dbContext = dbContext;
     }
 
-    public async Task<IEnumerable<Room>> GetRoomsAsync(string? search)
+    public async Task<IEnumerable<Room>> GetRoomsAsync(RoomFilterDto filter)
     {
-        var searchQuery = _dbContext.Rooms.AsQueryable();
-        if (!string.IsNullOrWhiteSpace(search))
+        var query = _dbContext.Rooms.Include(room => room.RoomImages).AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(filter.Search))
         {
-            searchQuery = searchQuery.Where(r => r.RoomNumber.Contains(search));
+            query = query.Where(room => room.RoomNumber.Contains(filter.Search));
         }
-        return await searchQuery.ToListAsync();
+
+        if (filter.HotelId.HasValue)
+        {
+            query = query.Where(room => room.HotelId == filter.HotelId.Value);
+        }
+
+        if (filter.RoomType.HasValue)
+        {
+            query = query.Where(room => room.RoomType == filter.RoomType.Value);
+        }
+
+        if (filter.IsActive.HasValue)
+        {
+            query = query.Where(room => room.IsActive == filter.IsActive.Value);
+        }
+
+        if (filter.IsOperationallyAvailable.HasValue)
+        {
+            query = query.Where(room => room.IsOperationallyAvailable == filter.IsOperationallyAvailable.Value);
+        }
+
+        return await query.ToListAsync();
     }
 
     public void Add(Room room)

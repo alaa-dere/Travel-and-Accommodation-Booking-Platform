@@ -1,3 +1,4 @@
+using HotelBooking.Application.AvailableRooms.Dtos;
 using HotelBooking.Domain.Entities;
 
 namespace HotelBooking.Application.Rooms.Dtos;
@@ -14,4 +15,5 @@ public class RoomResponseDto
    public bool IsOperationallyAvailable { get; set; }
    public bool IsActive { get; set; }
    public string? Description { get; set; }
+   public List<RoomImageResponseDto> Images { get; set; } = new();
 }
