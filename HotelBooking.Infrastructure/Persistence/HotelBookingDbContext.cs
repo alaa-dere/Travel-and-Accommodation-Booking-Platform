@@ -20,6 +20,7 @@ public class HotelBookingDbContext : DbContext
     public DbSet<Review> Reviews { get; set; }
     public DbSet<HotelAmenity> HotelAmenities { get; set; }
     public DbSet<Amenity> Amenities { get; set; }
+    public DbSet<NearbyAttraction> NearbyAttractions  { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
