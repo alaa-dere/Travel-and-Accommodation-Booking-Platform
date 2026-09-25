@@ -119,6 +119,7 @@ builder.Services.AddScoped<IHotelReviewRepository, HotelReviewRepository>();
 builder.Services.AddScoped<IGetHotelReviewsService, GetHotelReviews>();
 builder.Services.AddScoped<IHotelLocationRepository, HotelLocationRepository>();
 builder.Services.AddScoped<IGetHotelLocationService, GetHotelLocationService>();
+builder.Services.AddScoped<ISelectAvailableRoomService, SelectAvailableRoom>();
 
 var app = builder.Build();
 
