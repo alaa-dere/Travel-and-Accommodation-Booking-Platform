@@ -40,4 +40,12 @@ public class UserRepository : IUserRepository
         User? user = await _dbContext.Users.FirstOrDefaultAsync(u => u.Username == username);
         return user;
     }
+    
+    public async Task<string?> GetEmailByIdAsync(int userId)
+    {
+        return await _dbContext.Users.AsNoTracking()
+            .Where(user => user.UserId == userId)
+            .Select(user => user.Email)
+            .FirstOrDefaultAsync();
+    }
 }
