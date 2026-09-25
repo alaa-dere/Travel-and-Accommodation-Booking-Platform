@@ -31,6 +31,7 @@ using HotelBooking.Application.Rooms.Retrive;
 using HotelBooking.Application.Rooms.Update;
 using HotelBooking.Application.Search;
 using HotelBooking.Application.Search.Dtos;
+using HotelBooking.Application.TrendingDestinations;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 
@@ -124,6 +125,8 @@ builder.Services.AddScoped<ISelectAvailableRoomService, SelectAvailableRoom>();
 builder.Services.AddScoped<IRecentlyVisitedHotelRepository, RecentlyVisitedHotelRepository>();
 builder.Services.AddScoped<IRecordHotelVisitService, RecordHotelVisitService>();
 builder.Services.AddScoped<IGetRecentlyVisitedHotelsService, GetRecentlyVisitedHotelsService>();
+builder.Services.AddScoped<ITrendingDestinationRepository, TrendingDestinationRepository>();
+builder.Services.AddScoped<IGetTrendingDestinationsService, GetTrendingDestinationsService>();
 
 var app = builder.Build();
 
