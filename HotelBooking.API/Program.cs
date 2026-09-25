@@ -142,6 +142,8 @@ builder.Services.AddScoped<IGetCartService, GetCartService>();
 builder.Services.AddScoped<IRemoveCartItemService, RemoveCartItemService>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingAvailabilityService, BookingAvailabilityService>();
+builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
+builder.Services.AddScoped<IBookingPricingService, BookingPricingService>();
 
 var app = builder.Build();
 

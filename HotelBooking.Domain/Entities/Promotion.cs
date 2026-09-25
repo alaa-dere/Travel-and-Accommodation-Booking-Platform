@@ -9,6 +9,7 @@ public class Promotion
     public DateTime EndDate { get; set; }
     public DateTime CreatedAt { get; set; }
     public Hotel? Hotel { get; set; }
+    public bool IsActive { get; set; }
 
     public Promotion(int hotelId, int discountPercentage, DateTime startDate, DateTime endDate)
     {
@@ -32,5 +33,6 @@ public class Promotion
         StartDate = startDate;
         EndDate = endDate;
         CreatedAt = DateTime.UtcNow;
+        IsActive = true;
     }
 }
