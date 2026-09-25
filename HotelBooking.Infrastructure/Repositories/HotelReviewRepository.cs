@@ -1,5 +1,6 @@
 using HotelBooking.Application.HotelReviews.Dtos;
 using HotelBooking.Application.Interfaces;
+using HotelBooking.Domain.Entities;
 using HotelBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -27,5 +28,23 @@ public class HotelReviewRepository : IHotelReviewRepository
                 CreatedAt = review.CreatedAt
             })
            .ToListAsync();
+    }
+    
+    public Task<Booking?> GetBookingForReviewAsync(int bookingId)
+    {
+        return _dbContext.Bookings
+            .Include(booking => booking.Room)
+            .Include(booking => booking.Review)
+            .FirstOrDefaultAsync(booking => booking.BookingId == bookingId);
+    }
+    
+    public async Task AddReviewAsync(Review review)
+    {
+        await _dbContext.Reviews.AddAsync(review);
+    }
+    
+    public Task SaveChangesAsync()
+    {
+        return _dbContext.SaveChangesAsync();
     }
 }
