@@ -29,7 +29,7 @@ public class UpdateRoom : IUpdateRoomService
             throw new NotFoundException("Hotel does not exist");
         }
         
-        room.Update(request.RoomNumber, request.RoomType, request.PricePerNight, request.AdultsCapacity, request.ChildCapacity, request.HotelId);
+        room.Update(request.RoomNumber, request.RoomType, request.PricePerNight, request.AdultsCapacity, request.ChildCapacity, request.HotelId, request.Description);
         await _roomRepository.SaveChangesAsync();
         
         var response = new RoomResponseDto
@@ -42,7 +42,8 @@ public class UpdateRoom : IUpdateRoomService
             ChildCapacity = room.ChildCapacity,
             PricePerNight = room.PricePerNight,
             IsOperationallyAvailable = room.IsOperationallyAvailable,
-            IsActive = room.IsActive
+            IsActive = room.IsActive,
+            Description = room.Description,
         };
         return response;
     }

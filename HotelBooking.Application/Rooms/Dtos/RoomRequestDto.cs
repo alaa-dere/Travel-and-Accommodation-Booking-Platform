@@ -10,4 +10,5 @@ public class RoomRequestDto
     public int AdultsCapacity  { get; set; }
     public int ChildCapacity { get; set; }
     public decimal PricePerNight { get; set; } 
+    public string? Description { get; set; }
 }

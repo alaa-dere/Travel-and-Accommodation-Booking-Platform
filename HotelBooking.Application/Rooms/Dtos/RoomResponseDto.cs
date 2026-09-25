@@ -13,4 +13,5 @@ public class RoomResponseDto
    public decimal PricePerNight { get; set; }
    public bool IsOperationallyAvailable { get; set; }
    public bool IsActive { get; set; }
+   public string? Description { get; set; }
 }

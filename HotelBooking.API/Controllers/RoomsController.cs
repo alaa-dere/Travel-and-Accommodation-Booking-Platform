@@ -17,13 +17,14 @@ public class RoomsController : ControllerBase
     private readonly ICreateRoomService _createRoomService;
     private readonly IUpdateRoomService _updateRoomService;
     private readonly IChangeRoomStatusService _changeRoomStatusService;
-    
-    public RoomsController(ICreateRoomService createRoomService, IGetAllRoomsService getAllRoomsService, IUpdateRoomService updateRoomlService, IChangeRoomStatusService  changeRoomStatusService)
+    private readonly IChangeRoomOperationalAvailabilityService _changeRoomOperationalAvailabilityService;
+    public RoomsController(ICreateRoomService createRoomService, IGetAllRoomsService getAllRoomsService, IUpdateRoomService updateRoomlService, IChangeRoomStatusService  changeRoomStatusService , IChangeRoomOperationalAvailabilityService changeRoomOperationalAvailabilityService)
     {
         _createRoomService = createRoomService;
         _getAllRoomsService = getAllRoomsService;
         _updateRoomService = updateRoomlService;
         _changeRoomStatusService = changeRoomStatusService;
+        _changeRoomOperationalAvailabilityService = changeRoomOperationalAvailabilityService;
     }
     
     [HttpGet]
@@ -40,17 +41,24 @@ public class RoomsController : ControllerBase
         return Created("api/rooms", room);
     }
     
-    [HttpPut("{roomId}")]
+    [HttpPut("{roomId:int}")]
     public async Task<IActionResult> PutAsync(int roomId, RoomRequestDto request)
     {
         var room = await _updateRoomService.UpdateRoomAsync(roomId, request);
         return Ok(room);
     }
     
-    [HttpPatch("{roomId}/status")]
+    [HttpPatch("{roomId:int}/status")]
     public async Task<IActionResult> ChangeStatusAsync(int roomId, ChangeRoomStatusRequest request)
     { 
         await _changeRoomStatusService.ChangeRoomStatusAsync(roomId, request.IsActive);
+        return NoContent();
+    }
+    
+    [HttpPatch("{roomId:int}/operational-availability")]
+    public async Task<IActionResult> ChangeOperationalAvailabilityAsync(int roomId, ChangeRoomOperationalAvailabilityRequest request)
+    {
+        await _changeRoomOperationalAvailabilityService.ChangeOperationalAvailabilityAsync(roomId, request.IsOperationallyAvailable);
         return NoContent();
     }
 }

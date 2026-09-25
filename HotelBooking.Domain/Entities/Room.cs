@@ -18,7 +18,7 @@ public class Room
     public ICollection<RoomImage> RoomImages { get; set; } = new List<RoomImage>();
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
-    public Room(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId)
+    public Room(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId,  string? description)
     {
         if (string.IsNullOrWhiteSpace(roomNumber))
         {
@@ -54,9 +54,10 @@ public class Room
         IsActive = true;
         CreatedAt = DateTime.UtcNow;
         HotelId = hotelId;
+        Description = description;
     }
     
-    public void Update(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId)
+    public void Update(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId, string? description)
     {
         if (string.IsNullOrWhiteSpace(roomNumber))
         {
@@ -90,11 +91,18 @@ public class Room
         ChildCapacity = childCapacity;
         UpdatedAt = DateTime.UtcNow;
         HotelId = hotelId;
+        Description = description;
     }
 
     public void ChangeStatus(bool isActive)
     {
         IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
+    
+    public void ChangeOperationalAvailability(bool isOperationallyAvailable)
+    {
+        IsOperationallyAvailable = isOperationallyAvailable;
         UpdatedAt = DateTime.UtcNow;
     }
 }

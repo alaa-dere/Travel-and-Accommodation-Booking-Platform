@@ -128,6 +128,7 @@ builder.Services.AddScoped<IGetRecentlyVisitedHotelsService, GetRecentlyVisitedH
 builder.Services.AddScoped<ITrendingDestinationRepository, TrendingDestinationRepository>();
 builder.Services.AddScoped<IGetTrendingDestinationsService, GetTrendingDestinationsService>();
 builder.Services.AddScoped<ISubmitHotelReviewService, SubmitHotelReviewService>();
+builder.Services.AddScoped<IChangeRoomOperationalAvailabilityService, ChangeRoomOperationalAvailability>();
 
 var app = builder.Build();
 

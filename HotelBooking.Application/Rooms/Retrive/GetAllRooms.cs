@@ -26,6 +26,7 @@ public class GetAllRooms : IGetAllRoomsService
             PricePerNight = room.PricePerNight,
             IsOperationallyAvailable = room.IsOperationallyAvailable,
             IsActive = room.IsActive,
+            Description = room.Description
         });
         return results;
     }

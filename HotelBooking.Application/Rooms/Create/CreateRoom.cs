@@ -23,11 +23,21 @@ public class CreateRoom : ICreateRoomService
             throw new NotFoundException("Hotel doesn't exist");
         }
         
-        var room = new Room (request.RoomNumber,request.RoomType, request.PricePerNight, request.AdultsCapacity, request.ChildCapacity, request.HotelId);
+        var room = new Room (request.RoomNumber,request.RoomType, request.PricePerNight, request.AdultsCapacity, request.ChildCapacity, request.HotelId, request.Description);
         _roomRepository.Add(room);
         await _roomRepository.SaveChangesAsync();
         
-        var response = new RoomResponseDto{RoomId = room.RoomId, HotelId =  room.HotelId, RoomNumber = room.RoomNumber,  RoomType = room.RoomType,  AdultsCapacity = room.AdultsCapacity, ChildCapacity =  room.ChildCapacity, PricePerNight = room.PricePerNight, IsOperationallyAvailable = room.IsOperationallyAvailable, IsActive = room.IsActive};
+        var response = new RoomResponseDto{RoomId = room.RoomId, 
+            HotelId =  room.HotelId, 
+            RoomNumber = room.RoomNumber,  
+            RoomType = room.RoomType,  
+            AdultsCapacity = room.AdultsCapacity, 
+            ChildCapacity =  room.ChildCapacity, 
+            PricePerNight = room.PricePerNight, 
+            IsOperationallyAvailable = room.IsOperationallyAvailable, 
+            IsActive = room.IsActive,
+            Description = room.Description,
+        };
         return response;
     }
 }
