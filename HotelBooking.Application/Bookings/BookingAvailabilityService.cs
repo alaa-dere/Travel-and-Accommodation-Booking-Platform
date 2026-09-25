@@ -12,18 +12,19 @@ public class BookingAvailabilityService : IBookingAvailabilityService
         _bookingRepository = bookingRepository;
     }
 
-    public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime checkIn, DateTime checkOut)
+    public async Task<bool> IsRoomAvailableAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludedBookingId = null)
     {
         if (roomId <= 0)
         {
-            throw new BadRequestException("Room ID must be greater than zero.");
+            throw new BadRequestException("Invalid room ID.");
         }
+
         if (checkOut <= checkIn)
         {
             throw new BadRequestException("Check-out date must be after check-in date.");
         }
-        
-        var hasConflict = await _bookingRepository.HasConflictingBookingAsync(roomId, checkIn, checkOut);
+
+        var hasConflict = await _bookingRepository.HasConflictingBookingAsync(roomId, checkIn, checkOut, excludedBookingId);
         return !hasConflict;
     }
 }

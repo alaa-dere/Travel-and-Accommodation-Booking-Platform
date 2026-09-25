@@ -40,6 +40,7 @@ using HotelBooking.Application.TrendingDestinations;
 using HotelBooking.Infrastructure.Seed;
 using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
+using HotelBooking.Application.Bookings.Modify;
 using HotelBooking.Application.Emails;
 using HotelBooking.Application.Invoices;
 using HotelBooking.Infrastructure.Services;
@@ -164,6 +165,7 @@ builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IBookingConfirmationEmailService, BookingConfirmationEmailService>();
+builder.Services.AddScoped<IModifyBookingService, ModifyBookingService>();
 
 var app = builder.Build();
 

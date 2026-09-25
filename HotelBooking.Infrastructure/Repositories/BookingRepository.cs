@@ -14,11 +14,12 @@ public class BookingRepository : IBookingRepository
         _dbContext = dbContext;
     }
 
-    public async Task<bool> HasConflictingBookingAsync(int roomId, DateTime checkIn, DateTime checkOut)
+    public async Task<bool> HasConflictingBookingAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludedBookingId = null)
     {
         return await _dbContext.Bookings.AsNoTracking()
             .AnyAsync(booking => booking.RoomId == roomId && booking.BookingStatus != BookingStatus.Cancelled &&
-                                 booking.CheckIn < checkOut && booking.CheckOut > checkIn);
+                                 booking.CheckIn < checkOut && booking.CheckOut > checkIn &&
+                                 (!excludedBookingId.HasValue || booking.BookingId != excludedBookingId.Value));
     }
     
     public async Task AddAsync(Booking booking)
@@ -29,5 +30,13 @@ public class BookingRepository : IBookingRepository
     public async Task SaveChangesAsync()
     {
         await _dbContext.SaveChangesAsync();
+    }
+    
+    public async Task<Booking?> GetByIdForUserAsync(int bookingId, int userId)
+    {
+        return await _dbContext.Bookings
+            .Include(booking => booking.Invoice)
+            .ThenInclude(invoice => invoice!.Bookings)
+            .FirstOrDefaultAsync(booking => booking.BookingId == bookingId && booking.UserId == userId);
     }
 }

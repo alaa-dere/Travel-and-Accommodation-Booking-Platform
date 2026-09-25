@@ -102,4 +102,80 @@ public class Booking
         BookingStatus = BookingStatus.Cancelled;
         UpdatedAt = DateTime.UtcNow;
     }
+    
+    public void Modify(
+        int roomId,
+        DateTime checkIn,
+        DateTime checkOut,
+        int adults,
+        int children,
+        decimal pricePerNight,
+        decimal originalTotalPrice,
+        int discountPercentage,
+        decimal discountAmount,
+        decimal totalPrice,
+        string? specialRequests)
+    {
+        if (roomId <= 0)
+        {
+            throw new ArgumentException("Room ID must be greater than zero.", nameof(roomId));
+        }
+        
+        if (checkOut <= checkIn)
+        {
+            throw new ArgumentException("Check-out must be after check-in.");
+        }
+        
+        if (adults < 1)
+        {
+            throw new ArgumentException("At least one adult is required.", nameof(adults));
+        }
+        
+        if (children < 0)
+        {
+            throw new ArgumentException("Children count cannot be negative.", nameof(children));
+        }
+        
+        if (pricePerNight <= 0)
+        {
+            throw new ArgumentException("Price per night must be greater than zero.", nameof(pricePerNight));
+        }
+        
+        if (originalTotalPrice <= 0)
+        {
+            throw new ArgumentException("Original total price must be greater than zero.", nameof(originalTotalPrice));
+        }
+        
+        if (discountPercentage < 0 || discountPercentage >= 100)
+        {
+            throw new ArgumentException("Invalid discount percentage.", nameof(discountPercentage));
+        }
+        
+        if (discountAmount < 0)
+        {
+            throw new ArgumentException("Discount amount cannot be negative.", nameof(discountAmount));
+        }
+        
+        if (totalPrice <= 0)
+        {
+            throw new ArgumentException("Total price must be greater than zero.", nameof(totalPrice));
+        }
+        
+        if (specialRequests?.Length > 1000)
+        {
+            throw new ArgumentException("Special requests cannot exceed 1000 characters.", nameof(specialRequests));
+        }
+        RoomId = roomId;
+        CheckIn = checkIn;
+        CheckOut = checkOut;
+        Adults = adults;
+        Children = children;
+        PricePerNight = pricePerNight;
+        OriginalTotalPrice = originalTotalPrice;
+        DiscountPercentage = discountPercentage;
+        DiscountAmount = discountAmount;
+        TotalPrice = totalPrice;
+        SpecialRequests = specialRequests;
+        UpdatedAt = DateTime.UtcNow;
+    }
 }

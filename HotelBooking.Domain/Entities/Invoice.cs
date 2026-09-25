@@ -35,4 +35,13 @@ public class Invoice
         TotalAmount = totalAmount;
         CreatedAt = DateTime.UtcNow;
     }
+    
+    public void UpdateTotal(decimal totalAmount)
+    {
+        if (totalAmount <= 0)
+        {
+            throw new ArgumentException("Invoice total amount must be greater than zero.", nameof(totalAmount));
+        }
+        TotalAmount = totalAmount;
+    }
 }
