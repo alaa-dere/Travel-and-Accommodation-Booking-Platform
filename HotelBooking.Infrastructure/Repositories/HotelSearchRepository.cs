@@ -70,12 +70,12 @@ public class HotelSearchRepository : IHotelSearchRepository
         query = query.Where(hotel =>
             hotel.Rooms
                 .SelectMany(room => room.Bookings)
-                .Any(booking => booking.Review != null) &&
+                .Any(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null) &&
+
             hotel.Rooms
                 .SelectMany(room => room.Bookings)
-                .Where(booking => booking.Review != null)
-                .Average(booking => booking.Review!.Rating)
-            >= request.MinRating.Value);
+                .Where(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null)
+                .Average(booking => booking.Review!.Rating) >= request.MinRating.Value);
     }
 
     const int pageSize = 10;
@@ -85,7 +85,7 @@ public class HotelSearchRepository : IHotelSearchRepository
             Hotel = hotel,
             Rating = hotel.Rooms
                 .SelectMany(room => room.Bookings)
-                .Where(booking => booking.Review != null)
+                .Where(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null)
                 .Average(booking => (double?)booking.Review!.Rating),
             
             ThumbnailUrl = hotel.HotelImages

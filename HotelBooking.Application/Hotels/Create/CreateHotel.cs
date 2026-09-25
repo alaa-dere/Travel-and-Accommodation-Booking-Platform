@@ -39,7 +39,8 @@ public class CreateHotel : ICreateHotelService
             Latitude = hotel.Latitude, 
             Longitude = hotel.Longitude,
             Description = hotel.Description,
-            History = hotel.History
+            History = hotel.History,
+            IsActive = hotel.IsActive
         };
         return response;
     }

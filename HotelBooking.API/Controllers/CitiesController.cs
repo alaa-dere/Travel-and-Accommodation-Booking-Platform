@@ -38,14 +38,14 @@ public class CitiesController : ControllerBase
         return Created("api/cities", city);
     }
 
-    [HttpPut("{cityId}")]
+    [HttpPut("{cityId:int}")]
     public async Task<IActionResult> PutAsync(int cityId, CityRequestDto request)
     {
         var city = await _updateCityService.UpdateCityAsync(cityId, request);
         return Ok(city);
     }
     
-    [HttpDelete("{cityId}")]
+    [HttpDelete("{cityId:int}")]
     public async Task<IActionResult> DeleteAsync(int cityId)
     { 
         await _deleteCityService.DeleteCityAsync(cityId);

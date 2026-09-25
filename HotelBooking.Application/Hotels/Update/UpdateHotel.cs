@@ -42,7 +42,8 @@ public class UpdateHotel : IUpdateHotelService
                 Longitude = hotel.Longitude, 
                 HotelType = hotel.HotelType,
                 Description = hotel.Description,
-                History = hotel.History
+                History = hotel.History,
+                IsActive = hotel.IsActive
             };
         return response;
     }

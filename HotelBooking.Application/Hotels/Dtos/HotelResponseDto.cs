@@ -14,4 +14,5 @@ public class HotelResponseDto
     public HotelType HotelType { get; set; }
     public string? Description { get; set; } 
     public string? History { get; set; } 
+    public bool IsActive { get; set; }
 }

@@ -24,7 +24,10 @@ public class GetAllHotels : IGetAllHotelsService
             Address = hotel.Address,
             Latitude =  hotel.Latitude,
             Longitude =  hotel.Longitude,
-            HotelType = hotel.HotelType
+            HotelType = hotel.HotelType,
+            Description = hotel.Description,
+            History = hotel.History,
+            IsActive = hotel.IsActive
         });
         return results;
     }
