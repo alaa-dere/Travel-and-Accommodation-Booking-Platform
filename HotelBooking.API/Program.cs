@@ -18,6 +18,7 @@ using HotelBooking.Application.Cities.Delete;
 using HotelBooking.Application.FeatureDeals;
 using HotelBooking.Application.HotelDetails;
 using HotelBooking.Application.HotelImages;
+using HotelBooking.Application.HotelReviews;
 using HotelBooking.Application.Hotels.Create;
 using HotelBooking.Application.Hotels.Delete;
 using HotelBooking.Application.Hotels.Retrive;
@@ -113,6 +114,8 @@ builder.Services.AddScoped<IHotelImageRepository, HotelImageRepository>();
 builder.Services.AddScoped<IGetHotelImagesService, GetHotelImages>();
 builder.Services.AddScoped<IAvailableRoomRepository, AvailableRoomRepository>();
 builder.Services.AddScoped<IGetAvailableRoomsService, GetAvailableRooms>();
+builder.Services.AddScoped<IHotelReviewRepository, HotelReviewRepository>();
+builder.Services.AddScoped<IGetHotelReviewsService, GetHotelReviews>();
 
 var app = builder.Build();
 
