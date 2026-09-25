@@ -20,4 +20,14 @@ public class BookingRepository : IBookingRepository
             .AnyAsync(booking => booking.RoomId == roomId && booking.BookingStatus != BookingStatus.Cancelled &&
                                  booking.CheckIn < checkOut && booking.CheckOut > checkIn);
     }
+    
+    public async Task AddAsync(Booking booking)
+    {
+        await _dbContext.Bookings.AddAsync(booking);
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _dbContext.SaveChangesAsync();
+    }
 }

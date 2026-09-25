@@ -5,6 +5,7 @@ public class Booking
     public int BookingId { get; set; }
     public int UserId { get; set; }
     public int RoomId { get; set; }
+    public int InvoiceId { get; set; }
     public DateTime CheckIn { get; set; }
     public DateTime CheckOut { get; set; }
     public int Adults { get; set; }
@@ -20,6 +21,7 @@ public class Booking
     public User? User { get; set; }
     public Room? Room { get; set; }
     public Review? Review { get; set; }
+    public Invoice? Invoice { get; set; }
 
     public Booking(int userId, int roomId, DateTime checkIn, DateTime checkOut, int adults, int children, decimal pricePerNight, decimal originalTotalPrice, int discountPercentage, decimal discountAmount, decimal totalPrice)
 {

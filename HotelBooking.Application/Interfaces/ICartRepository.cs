@@ -9,4 +9,5 @@ public interface ICartRepository
     Task<CartItem?> GetByIdAsync(int cartItemId);
     void Delete(CartItem cartItem);
     Task SaveChangesAsync();
+    void DeleteRange(IEnumerable<CartItem> cartItems);
 }

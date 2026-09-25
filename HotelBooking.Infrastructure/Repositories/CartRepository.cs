@@ -45,4 +45,9 @@ public class CartRepository : ICartRepository
     {
         await _dbContext.SaveChangesAsync();
     }
+    
+    public void DeleteRange(IEnumerable<CartItem> cartItems)
+    {
+        _dbContext.CartItems.RemoveRange(cartItems);
+    }
 }
