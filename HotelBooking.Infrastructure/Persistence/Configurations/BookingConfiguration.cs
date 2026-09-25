@@ -13,5 +13,7 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.HasOne(b => b.User).WithMany(u => u.Bookings).HasForeignKey(b => b.UserId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(b => b.PricePerNight).HasColumnType("decimal(18,2)");
         builder.Property(b => b.TotalPrice).HasColumnType("decimal(18,2)");
+        builder.Property(b => b.OriginalTotalPrice).HasColumnType("decimal(18,2)");
+        builder.Property(b => b.DiscountAmount).HasColumnType("decimal(18,2)");
     }
 }

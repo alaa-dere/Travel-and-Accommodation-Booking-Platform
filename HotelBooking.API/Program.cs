@@ -13,6 +13,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using HotelBooking.Application;
 using HotelBooking.Application.AvailableRooms;
+using HotelBooking.Application.Bookings;
 using HotelBooking.Application.Cart;
 using HotelBooking.Application.Cart.Create;
 using HotelBooking.Application.Cities;
@@ -139,6 +140,8 @@ builder.Services.AddScoped<IAddCartItemService, AddCartItemService>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<IGetCartService, GetCartService>();
 builder.Services.AddScoped<IRemoveCartItemService, RemoveCartItemService>();
+builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
+builder.Services.AddScoped<IBookingPricingService, BookingPricingService>();
 
 var app = builder.Build();
 
