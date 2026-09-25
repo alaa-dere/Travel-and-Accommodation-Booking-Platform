@@ -27,8 +27,7 @@ public class CheckoutController : ControllerBase
         {
             return Unauthorized();
         }
-        
-        var result = await _createBookingsService.CreateBookingsAsync(userId, request.SpecialRequests);
+        var result = await _createBookingsService.CreateBookingsAsync(userId, request.SpecialRequests, request.Payment);
         return Ok(result);
     }
 }

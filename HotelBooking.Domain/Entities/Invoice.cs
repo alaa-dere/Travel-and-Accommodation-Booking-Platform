@@ -9,6 +9,7 @@ public class Invoice
     public DateTime CreatedAt { get; set; }
     public User? User { get; set; }
     public Hotel? Hotel { get; set; }
+    public Payment? Payment { get; set; }
 
     public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
 
