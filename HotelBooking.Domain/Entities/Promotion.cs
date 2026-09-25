@@ -35,4 +35,14 @@ public class Promotion
         CreatedAt = DateTime.UtcNow;
         IsActive = true;
     }
+    
+    public void Activate()
+    {
+        IsActive = true;
+    }
+
+    public void Deactivate()
+    {
+        IsActive = false;
+    }
 }

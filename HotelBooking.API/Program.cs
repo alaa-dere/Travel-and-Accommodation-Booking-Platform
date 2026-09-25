@@ -44,6 +44,8 @@ using HotelBooking.Application.Bookings.Cancel;
 using HotelBooking.Application.Bookings.Modify;
 using HotelBooking.Application.Emails;
 using HotelBooking.Application.Invoices;
+using HotelBooking.Application.Promotions.Create;
+using HotelBooking.Application.Promotions.Status;
 using HotelBooking.Infrastructure.Services;
 using QuestPDF.Infrastructure;
 
@@ -168,6 +170,8 @@ builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
 builder.Services.AddScoped<IBookingConfirmationEmailService, BookingConfirmationEmailService>();
 builder.Services.AddScoped<IModifyBookingService, ModifyBookingService>();
 builder.Services.AddScoped<ICancelBookingService, CancelBookingService>();
+builder.Services.AddScoped<ICreatePromotionService, CreatePromotionService>();
+builder.Services.AddScoped<IChangePromotionStatusService, ChangePromotionStatusService>();
 
 var app = builder.Build();
 

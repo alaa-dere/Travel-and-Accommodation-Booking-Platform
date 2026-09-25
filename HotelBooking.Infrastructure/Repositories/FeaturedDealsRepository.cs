@@ -9,6 +9,7 @@ namespace HotelBooking.Infrastructure.Repositories;
 public class FeaturedDealsRepository : IFeaturedDealsRepository
 {
     private readonly HotelBookingDbContext _dbContext;
+
     public FeaturedDealsRepository(HotelBookingDbContext dbContext)
     {
         _dbContext = dbContext;
@@ -18,7 +19,7 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
     {
         var query = _dbContext.Hotels.AsNoTracking()
             .Where(hotel => hotel.IsActive)
-            .Where(hotel => hotel.Promotions.Any(promotion => promotion.StartDate <= now && promotion.EndDate >= now))
+            .Where(hotel => hotel.Promotions.Any(promotion => promotion.IsActive && promotion.StartDate <= now && promotion.EndDate >= now))
             .Where(hotel => hotel.Rooms.Any(room => room.IsActive && room.IsOperationallyAvailable))
             .Select(hotel => new FeaturedDealData
             {
@@ -32,19 +33,20 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
                     .Min(room => room.PricePerNight),
 
                 DiscountPercentage = hotel.Promotions
-                    .Where(promotion => promotion.StartDate <= now && promotion.EndDate >= now)
+                    .Where(promotion => promotion.IsActive && promotion.StartDate <= now && promotion.EndDate >= now)
+                    .OrderByDescending(promotion => promotion.DiscountPercentage)
                     .Select(promotion => promotion.DiscountPercentage)
                     .First(),
-                
+
                 ThumbnailUrl = hotel.HotelImages
                     .OrderBy(image => image.DisplayOrder)
                     .Select(image => image.ImageUrl)
                     .FirstOrDefault(),
-                
+
                 BookingCountLast30Days = hotel.Rooms
                     .SelectMany(room => room.Bookings)
                     .Count(booking => booking.CreatedAt >= thirtyDaysAgo && booking.BookingStatus != BookingStatus.Cancelled),
-                
+
                 AverageRating = hotel.Rooms
                     .SelectMany(room => room.Bookings)
                     .Where(booking => booking.Review != null)
@@ -52,8 +54,7 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
             })
             .OrderBy(deal => deal.BookingCountLast30Days)
             .Take(5);
-        
+
         return await query.ToListAsync();
     }
-
 }

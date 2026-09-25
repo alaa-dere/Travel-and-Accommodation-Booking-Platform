@@ -21,4 +21,19 @@ public class PromotionRepository : IPromotionRepository
             .OrderByDescending(promotion => promotion.DiscountPercentage)
             .FirstOrDefaultAsync();
     }
+    
+    public async Task AddAsync(Promotion promotion)
+    {
+        await _dbContext.Promotions.AddAsync(promotion);
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _dbContext.SaveChangesAsync();
+    }
+    
+    public async Task<Promotion?> GetByIdAsync(int promotionId)
+    {
+        return await _dbContext.Promotions.FirstOrDefaultAsync(promotion => promotion.PromotionId == promotionId);
+    }
 }
