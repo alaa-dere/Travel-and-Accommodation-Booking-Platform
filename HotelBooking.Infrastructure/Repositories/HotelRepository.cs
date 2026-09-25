@@ -66,8 +66,9 @@ public class HotelRepository : IHotelRepository
                     Description = amenity.Amenity.Description
                 }).ToList(),
                 
-                Rating = hotel.Rooms.SelectMany(room => room.Bookings)
-                    .Where(booking => booking.Review != null)
+                Rating = hotel.Rooms
+                    .SelectMany(room => room.Bookings)
+                    .Where(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null)
                     .Average(booking => (int?)booking.Review!.Rating)
             }).FirstOrDefaultAsync();
     }

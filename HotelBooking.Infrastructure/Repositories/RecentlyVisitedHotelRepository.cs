@@ -44,13 +44,11 @@ public class RecentlyVisitedHotelRepository : IRecentlyVisitedHotelRepository
                 
                 Rating = visit.Hotel.Rooms
                     .SelectMany(room => room.Bookings)
-                    .Where(booking => booking.Review != null)
+                    .Where(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null)
                     .Average(booking => (double?)booking.Review!.Rating),
 
                 StartingPricePerNight = visit.Hotel.Rooms
-                    .Where(room =>
-                        room.IsActive &&
-                        room.IsOperationallyAvailable)
+                    .Where(room => room.IsActive && room.IsOperationallyAvailable)
                     .Min(room => (decimal?)room.PricePerNight)
             }).ToListAsync();
     }

@@ -19,7 +19,7 @@ public class HotelReviewRepository : IHotelReviewRepository
 
     {
         return _dbContext.Reviews.AsNoTracking()
-            .Where(review => review.Booking != null && review.Booking.Room != null && review.Booking.Room.HotelId == hotelId)
+            .Where(review => review.Booking != null && review.Booking.Room != null && review.Booking.Room.HotelId == hotelId && review.Booking.BookingStatus == BookingStatus.Completed)
             .OrderByDescending(review => review.CreatedAt)
             .Select(review => new ReviewResponseDto
             {
