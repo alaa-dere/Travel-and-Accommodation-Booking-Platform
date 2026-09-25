@@ -44,6 +44,10 @@ using HotelBooking.Application.Bookings.Cancel;
 using HotelBooking.Application.Bookings.Modify;
 using HotelBooking.Application.Emails;
 using HotelBooking.Application.Invoices;
+using HotelBooking.Application.NearbyAttractions.Create;
+using HotelBooking.Application.NearbyAttractions.GetByHotel;
+using HotelBooking.Application.NearbyAttractions.Remove;
+using HotelBooking.Application.NearbyAttractions.Update;
 using HotelBooking.Application.Promotions.Create;
 using HotelBooking.Application.Promotions.Status;
 using HotelBooking.Infrastructure.Services;
@@ -172,6 +176,11 @@ builder.Services.AddScoped<IModifyBookingService, ModifyBookingService>();
 builder.Services.AddScoped<ICancelBookingService, CancelBookingService>();
 builder.Services.AddScoped<ICreatePromotionService, CreatePromotionService>();
 builder.Services.AddScoped<IChangePromotionStatusService, ChangePromotionStatusService>();
+builder.Services.AddScoped<INearbyAttractionRepository, NearbyAttractionRepository>();
+builder.Services.AddScoped<ICreateNearbyAttractionService, CreateNearbyAttractionService>();
+builder.Services.AddScoped<IGetNearbyAttractionsService, GetNearbyAttractionsService>();
+builder.Services.AddScoped<IUpdateNearbyAttractionService, UpdateNearbyAttractionService>();
+builder.Services.AddScoped<IRemoveNearbyAttractionService, RemoveNearbyAttractionService>();
 
 var app = builder.Build();
 
