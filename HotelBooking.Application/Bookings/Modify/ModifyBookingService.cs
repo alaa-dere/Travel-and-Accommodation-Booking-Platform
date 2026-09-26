@@ -1,6 +1,7 @@
 using HotelBooking.Application.Bookings.Dtos;
 using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
+using HotelBooking.Domain.Entities;
 
 namespace HotelBooking.Application.Bookings.Modify;
 
@@ -52,9 +53,19 @@ public class ModifyBookingService : IModifyBookingService
                 throw new ConflictException("Booking cannot be modified after the stay has started.");
             }
 
+            if (booking.BookingStatus == BookingStatus.Cancelled)
+            {
+                throw new ConflictException("Cancelled bookings cannot be modified.");
+            }
+
             if (request.RoomId <= 0)
             {
                 throw new BadRequestException("Invalid room ID.");
+            }
+
+            if (request.CheckIn == default || request.CheckOut == default)
+            {
+                throw new BadRequestException("Check-in and check-out dates are required.");
             }
 
             if (request.CheckOut <= request.CheckIn)
