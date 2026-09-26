@@ -42,6 +42,7 @@ using Microsoft.OpenApi.Models;
 using System.Text.Json.Serialization;
 using HotelBooking.Application.Bookings.Cancel;
 using HotelBooking.Application.Bookings.Modify;
+using HotelBooking.Application.Cart.Retrive;
 using HotelBooking.Application.Emails;
 using HotelBooking.Application.Invoices;
 using HotelBooking.Application.NearbyAttractions.Create;

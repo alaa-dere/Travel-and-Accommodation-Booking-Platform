@@ -1,6 +1,6 @@
 using HotelBooking.Application.Cart.Dtos;
 
-namespace HotelBooking.Application.Cart;
+namespace HotelBooking.Application.Cart.Retrive;
 
 public interface IGetCartService
 {
