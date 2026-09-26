@@ -27,9 +27,14 @@ public class PromotionsController : ControllerBase
     }
     
     [HttpPatch("{promotionId:int}/status")]
-    public async Task<IActionResult> ChangePromotionStatus(int promotionId, [FromQuery] bool isActive)
+    public async Task<IActionResult> ChangePromotionStatus(int promotionId, [FromQuery] bool? isActive)
     {
-        await _changePromotionStatusService.ChangeStatusAsync(promotionId, isActive);
+        if (!isActive.HasValue)
+        {
+            return BadRequest(new { message = "The isActive query parameter is required." });
+        }
+
+        await _changePromotionStatusService.ChangeStatusAsync(promotionId, isActive.Value);
         return NoContent();
     }
 }
