@@ -17,6 +17,11 @@ public class GetAvailableRooms : IGetAvailableRoomsService
 
     public async Task<List<AvailableRoomResponseDto>> GetAvailableRoomsAsync(int hotelId, AvailableRoomsRequestDto request)
     {
+        if (request.CheckIn == default || request.CheckOut == default)
+        {
+            throw new BadRequestException("Check-in and check-out dates are required.");
+        }
+
         if (request.CheckOut <= request.CheckIn)
         {
             throw new BadRequestException("Check-out date must be after check-in date.");

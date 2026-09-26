@@ -15,6 +15,11 @@ public class SelectAvailableRoom : ISelectAvailableRoomService
 
     public async Task<SelectedRoomResponseDto> SelectRoomAsync(int hotelId, int roomId, AvailableRoomsRequestDto request)
     {
+        if (request.CheckIn == default || request.CheckOut == default)
+        {
+            throw new BadRequestException("Check-in and check-out dates are required.");
+        }
+
         if (request.CheckOut <= request.CheckIn)
         {
             throw new BadRequestException("Check-out date must be after check-in date.");

@@ -186,7 +186,10 @@ builder.Services.AddScoped<IRemoveNearbyAttractionService, RemoveNearbyAttractio
 var app = builder.Build();
 
 QuestPDF.Settings.License = LicenseType.Community;
-await AdminSeeder.SeedAsync(app.Services);
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    await AdminSeeder.SeedAsync(app.Services);
+}
 
 // HTTP Pipeline
 if (app.Environment.IsDevelopment())
@@ -201,3 +204,4 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+public partial class Program { }
