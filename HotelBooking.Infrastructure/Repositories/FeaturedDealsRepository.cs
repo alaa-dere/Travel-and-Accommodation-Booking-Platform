@@ -28,9 +28,9 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
                 City = hotel.City.Name,
                 Address = hotel.Address,
 
-                StartingPrice = hotel.Rooms
+                StartingPrice = (decimal)hotel.Rooms
                     .Where(room => room.IsActive && room.IsOperationallyAvailable)
-                    .Min(room => room.PricePerNight),
+                    .Min(room => (double)room.PricePerNight),
 
                 DiscountPercentage = hotel.Promotions
                     .Where(promotion => promotion.IsActive && promotion.StartDate <= now && promotion.EndDate >= now)
@@ -47,12 +47,12 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
                     .SelectMany(room => room.Bookings)
                     .Count(booking => booking.CreatedAt >= thirtyDaysAgo && booking.BookingStatus != BookingStatus.Cancelled),
 
-                AverageRating = hotel.Rooms
+                AverageRating = (decimal?)hotel.Rooms
                     .SelectMany(room => room.Bookings)
                     .Where(booking => booking.Review != null)
-                    .Average(booking => (decimal?)booking.Review!.Rating)
+                    .Average(booking => (double?)booking.Review!.Rating)
             })
-            .OrderBy(deal => deal.BookingCountLast30Days)
+            .OrderByDescending(deal => deal.BookingCountLast30Days)
             .Take(5);
 
         return await query.ToListAsync();
