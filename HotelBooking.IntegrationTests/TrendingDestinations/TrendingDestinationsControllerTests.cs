@@ -103,12 +103,27 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         Assert.DoesNotContain(destinations, item => item.CityId == oldCity.CityId);
     }
 
+    [Fact]
+    public async Task GetTrendingDestinations_ShouldExcludeOldBookingsFromIncludedCityCount()
+    {
+        await ClearBookingsAsync();
+        var city = await CreateCityAsync();
+        var room = await CreateRoomAsync((await CreateHotelAsync(city.CityId)).HotelId);
+        await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-29));
+        await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-31));
+        using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
+
+        var destination = Assert.Single(await ReadAsync(await client.GetAsync(Endpoint)));
+
+        Assert.Equal(city.CityId, destination.CityId);
+        Assert.Equal(1, destination.BookingCount);
+    }
+
     [Theory]
     [InlineData(BookingStatus.Pending)]
     [InlineData(BookingStatus.Confirmed)]
     [InlineData(BookingStatus.Completed)]
-    [InlineData(BookingStatus.Cancelled)]
-    public async Task GetTrendingDestinations_ShouldCountEveryBookingStatus(BookingStatus status)
+    public async Task GetTrendingDestinations_ShouldCountNonCancelledBookingStatus(BookingStatus status)
     {
         await ClearBookingsAsync();
         var city = await CreateCityAsync();
@@ -123,19 +138,72 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
     }
 
     [Fact]
-    public async Task GetTrendingDestinations_ShouldCountBookingsForInactiveHotelsAndRooms()
+    public async Task GetTrendingDestinations_ShouldExcludeCancelledBookings()
     {
         await ClearBookingsAsync();
         var city = await CreateCityAsync();
-        var hotel = await CreateHotelAsync(city.CityId, false);
-        var room = await CreateRoomAsync(hotel.HotelId, false, false);
+        var room = await CreateRoomAsync((await CreateHotelAsync(city.CityId)).HotelId);
+        await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-1), BookingStatus.Cancelled);
+        using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
+
+        var destinations = await ReadAsync(await client.GetAsync(Endpoint));
+
+        Assert.Empty(destinations);
+    }
+
+    [Theory]
+    [InlineData(InactiveSource.Hotel)]
+    [InlineData(InactiveSource.Room)]
+    [InlineData(InactiveSource.OperationallyUnavailableRoom)]
+    public async Task GetTrendingDestinations_ShouldExcludeBookingsForInactiveInventory(InactiveSource source)
+    {
+        await ClearBookingsAsync();
+        var city = await CreateCityAsync();
+        var hotel = await CreateHotelAsync(city.CityId, source != InactiveSource.Hotel);
+        var room = await CreateRoomAsync(
+            hotel.HotelId,
+            source != InactiveSource.Room,
+            source != InactiveSource.OperationallyUnavailableRoom);
         await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-1));
         using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
 
-        var destination = Assert.Single(await ReadAsync(await client.GetAsync(Endpoint)));
+        var destinations = await ReadAsync(await client.GetAsync(Endpoint));
 
-        Assert.Equal(city.CityId, destination.CityId);
-        Assert.Equal(1, destination.BookingCount);
+        Assert.Empty(destinations);
+    }
+
+    [Fact]
+    public async Task GetTrendingDestinations_CitiesWithSameNameAndCountry_ShouldRemainSeparate()
+    {
+        await ClearBookingsAsync();
+        var firstCity = await CreateCityAsync("Springfield", "Same Country");
+        var secondCity = await CreateCityAsync("Springfield", "Same Country");
+        var firstRoom = await CreateRoomAsync((await CreateHotelAsync(firstCity.CityId)).HotelId);
+        var secondRoom = await CreateRoomAsync((await CreateHotelAsync(secondCity.CityId)).HotelId);
+        await CreateBookingAsync(firstRoom, DateTime.UtcNow.AddDays(-1));
+        await CreateBookingAsync(secondRoom, DateTime.UtcNow.AddDays(-1));
+        using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
+
+        var destinations = await ReadAsync(await client.GetAsync(Endpoint));
+
+        Assert.Equal(2, destinations.Count);
+        Assert.Contains(destinations, item => item.CityId == firstCity.CityId && item.BookingCount == 1);
+        Assert.Contains(destinations, item => item.CityId == secondCity.CityId && item.BookingCount == 1);
+    }
+
+    [Fact]
+    public async Task GetTrendingDestinations_WhenCountsTie_ShouldOrderByCityId()
+    {
+        await ClearBookingsAsync();
+        var firstCity = await CreateCityAsync();
+        var secondCity = await CreateCityAsync();
+        await CreateBookingAsync(await CreateRoomAsync((await CreateHotelAsync(firstCity.CityId)).HotelId), DateTime.UtcNow.AddDays(-1));
+        await CreateBookingAsync(await CreateRoomAsync((await CreateHotelAsync(secondCity.CityId)).HotelId), DateTime.UtcNow.AddDays(-1));
+        using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
+
+        var destinations = await ReadAsync(await client.GetAsync(Endpoint));
+
+        Assert.Equal(new[] { firstCity.CityId, secondCity.CityId }.Order(), destinations.Select(item => item.CityId));
     }
 
     [Fact]
@@ -246,4 +314,6 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         await response.Content.ReadFromJsonAsync<List<TrendingDestinationResponseDto>>() ?? [];
 
     private static string Unique(string prefix) => $"{prefix}_{Guid.NewGuid():N}";
+
+    public enum InactiveSource { Hotel, Room, OperationallyUnavailableRoom }
 }

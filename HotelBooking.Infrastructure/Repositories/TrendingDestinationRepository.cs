@@ -1,5 +1,6 @@
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Application.TrendingDestinations.Dtos;
+using HotelBooking.Domain.Entities;
 using HotelBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -17,7 +18,12 @@ public class TrendingDestinationRepository : ITrendingDestinationRepository
     public async Task<List<TrendingDestinationResponseDto>> GetTrendingDestinationsAsync(DateTime fromDate)
     {
         return await _dbContext.Bookings.AsNoTracking()
-            .Where(booking => booking.CreatedAt >= fromDate)
+            .Where(booking =>
+                booking.CreatedAt >= fromDate &&
+                booking.BookingStatus != BookingStatus.Cancelled &&
+                booking.Room!.IsActive &&
+                booking.Room.IsOperationallyAvailable &&
+                booking.Room.Hotel!.IsActive)
             .GroupBy(booking => new
             {
                 booking.Room!.Hotel!.CityId,
@@ -31,6 +37,9 @@ public class TrendingDestinationRepository : ITrendingDestinationRepository
                 Country = group.Key.Country,
                 BookingCount = group.Count()
             })
-            .OrderByDescending(destination => destination.BookingCount).Take(5).ToListAsync();
+            .OrderByDescending(destination => destination.BookingCount)
+            .ThenBy(destination => destination.CityId)
+            .Take(5)
+            .ToListAsync();
     }
 }
