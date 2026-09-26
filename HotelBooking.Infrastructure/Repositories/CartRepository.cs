@@ -22,7 +22,6 @@ public class CartRepository : ICartRepository
     public async Task<List<CartItem>> GetByUserIdAsync(int userId)
     {
         return await _dbContext.CartItems
-            .AsNoTracking()
             .Include(cartItem => cartItem.Room)
             .ThenInclude(room => room!.Hotel)
             .Where(cartItem => cartItem.UserId == userId)

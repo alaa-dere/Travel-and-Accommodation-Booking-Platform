@@ -1,4 +1,5 @@
 using HotelBooking.Infrastructure.Persistence;
+using HotelBooking.Application.Emails;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Data.Sqlite;
@@ -43,6 +44,18 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 services.Remove(descriptor);
             }
+
+            var emailSenderDescriptor = services.SingleOrDefault(
+                service => service.ServiceType == typeof(IEmailSender));
+
+            if (emailSenderDescriptor != null)
+            {
+                services.Remove(emailSenderDescriptor);
+            }
+
+            services.AddSingleton<TestEmailSender>();
+            services.AddSingleton<IEmailSender>(provider =>
+                provider.GetRequiredService<TestEmailSender>());
 
             _connection = new SqliteConnection("DataSource=:memory:");
             _connection.Open();

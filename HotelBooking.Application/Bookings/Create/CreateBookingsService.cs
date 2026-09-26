@@ -74,8 +74,8 @@ public class CreateBookingsService : ICreateBookingsService
         var invoiceCount = 0;
         var paymentResults = new List<CheckoutPaymentResultDto>();
         var confirmations = new List<BookingConfirmationDto>();
-        var confirmationData = new List<(Invoice Invoice, List<Booking> Bookings, Payment Payment, string HotelName)>();
-        var emailConfirmationData = new List<(Invoice Invoice, List<Booking> Bookings, Payment Payment, string HotelName)>();
+        var confirmationData = new List<(Invoice Invoice, List<(Booking Booking, string RoomNumber)> Bookings, Payment Payment, string HotelName)>();
+        var emailConfirmationData = new List<(Invoice Invoice, List<(Booking Booking, string RoomNumber)> Bookings, Payment Payment, string HotelName)>();
 
         await _transactionManager.ExecuteSerializableAsync(async () =>
         {
@@ -92,6 +92,7 @@ public class CreateBookingsService : ICreateBookingsService
             foreach (var hotelGroup in itemsByHotel)
             {
                 var pricedBookings = new List<Booking>();
+                var bookingConfirmations = new List<(Booking Booking, string RoomNumber)>();
 
                 foreach (var item in hotelGroup)
                 {
@@ -117,9 +118,8 @@ public class CreateBookingsService : ICreateBookingsService
                         price.TotalPrice,
                         specialRequests);
 
-                    booking.Room = item.Room;
-
                     pricedBookings.Add(booking);
+                    bookingConfirmations.Add((booking, item.Room!.RoomNumber));
                 }
 
                 var invoiceTotal = pricedBookings.Sum(booking => booking.TotalPrice);
@@ -149,8 +149,8 @@ public class CreateBookingsService : ICreateBookingsService
                 {
                     var hotelName = hotelGroup.First().Room!.Hotel!.Name;
 
-                    confirmationData.Add((invoice, pricedBookings, payment, hotelName));
-                    emailConfirmationData.Add((invoice, pricedBookings, payment, hotelName));
+                    confirmationData.Add((invoice, bookingConfirmations, payment, hotelName));
+                    emailConfirmationData.Add((invoice, bookingConfirmations, payment, hotelName));
                 }
 
                 paymentResults.Add(new CheckoutPaymentResultDto { Amount = payment.Amount, Status = payment.Status });
@@ -176,13 +176,13 @@ public class CreateBookingsService : ICreateBookingsService
                     InvoiceTotal = data.Invoice.TotalAmount,
                     PaymentStatus = data.Payment.Status,
 
-                    Rooms = data.Bookings.Select(booking => new BookingConfirmationEmailRoomDto
+                    Rooms = data.Bookings.Select(item => new BookingConfirmationEmailRoomDto
                             {
-                                BookingId = booking.BookingId,
-                                RoomNumber = booking.Room?.RoomNumber ?? string.Empty,
-                                CheckIn = booking.CheckIn,
-                                CheckOut = booking.CheckOut,
-                                TotalPrice = booking.TotalPrice
+                                BookingId = item.Booking.BookingId,
+                                RoomNumber = item.RoomNumber,
+                                CheckIn = item.Booking.CheckIn,
+                                CheckOut = item.Booking.CheckOut,
+                                TotalPrice = item.Booking.TotalPrice
                             }).ToList()
                 };
 
@@ -208,14 +208,14 @@ public class CreateBookingsService : ICreateBookingsService
                     PaymentStatus = data.Payment.Status,
 
                     Rooms = data.Bookings
-                        .Select(booking => new BookingConfirmationRoomDto
+                        .Select(item => new BookingConfirmationRoomDto
                             {
-                                BookingId = booking.BookingId,
-                                RoomId = booking.RoomId,
-                                RoomNumber = booking.Room?.RoomNumber ?? string.Empty,
-                                CheckIn = booking.CheckIn,
-                                CheckOut = booking.CheckOut,
-                                TotalAmount = booking.TotalPrice
+                                BookingId = item.Booking.BookingId,
+                                RoomId = item.Booking.RoomId,
+                                RoomNumber = item.RoomNumber,
+                                CheckIn = item.Booking.CheckIn,
+                                CheckOut = item.Booking.CheckOut,
+                                TotalAmount = item.Booking.TotalPrice
                             }).ToList()
                 });
         }
