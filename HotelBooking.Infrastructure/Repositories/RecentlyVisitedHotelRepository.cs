@@ -47,9 +47,9 @@ public class RecentlyVisitedHotelRepository : IRecentlyVisitedHotelRepository
                     .Where(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null)
                     .Average(booking => (double?)booking.Review!.Rating),
 
-                StartingPricePerNight = visit.Hotel.Rooms
+                StartingPricePerNight = (decimal?)visit.Hotel.Rooms
                     .Where(room => room.IsActive && room.IsOperationallyAvailable)
-                    .Min(room => (decimal?)room.PricePerNight)
+                    .Min(room => (double?)room.PricePerNight)
             }).ToListAsync();
     }
 }
