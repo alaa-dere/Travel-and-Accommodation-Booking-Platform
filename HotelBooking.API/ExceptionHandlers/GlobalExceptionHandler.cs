@@ -5,36 +5,59 @@ namespace HotelBooking.API.ExceptionHandlers;
 
 public class GlobalExceptionHandler : IExceptionHandler
 {
-    public async ValueTask<bool> TryHandleAsync(HttpContext httpContext, Exception exception, CancellationToken cancellationToken)
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    public GlobalExceptionHandler(ILogger<GlobalExceptionHandler> logger)
     {
-        if (exception is ConflictException)
+        _logger = logger;
+    }
+
+    public async ValueTask<bool> TryHandleAsync(
+        HttpContext httpContext,
+        Exception exception,
+        CancellationToken cancellationToken)
+    {
+        var statusCode = exception switch
         {
-            httpContext.Response.StatusCode = StatusCodes.Status409Conflict;
-            await httpContext.Response.WriteAsJsonAsync(new { message = exception.Message }, cancellationToken);
-            return true;
+            ConflictException => StatusCodes.Status409Conflict,
+            UnauthorizedException => StatusCodes.Status401Unauthorized,
+            NotFoundException => StatusCodes.Status404NotFound,
+            BadRequestException => StatusCodes.Status400BadRequest,
+            _ => StatusCodes.Status500InternalServerError
+        };
+
+        if (statusCode == StatusCodes.Status500InternalServerError)
+        {
+            _logger.LogError(
+                exception,
+                "Unhandled exception while processing {Method} {Path}. TraceId: {TraceId}",
+                httpContext.Request.Method,
+                httpContext.Request.Path,
+                httpContext.TraceIdentifier);
+        }
+        else
+        {
+            // Avoid logging the message because application errors can contain user-provided data.
+            _logger.LogWarning(
+                "Request rejected with {ExceptionType} and status {StatusCode}. TraceId: {TraceId}",
+                exception.GetType().Name,
+                statusCode,
+                httpContext.TraceIdentifier);
         }
 
-        if (exception is UnauthorizedException)
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status401Unauthorized;
-            await httpContext.Response.WriteAsJsonAsync(new { message = exception.Message }, cancellationToken);
-            return true;
-        }
-        
-        if (exception is NotFoundException)
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status404NotFound;
-            await httpContext.Response.WriteAsJsonAsync(new { message = exception.Message }, cancellationToken);
-            return true;
-        }
-        
-        if (exception is BadRequestException)
-        {
-            httpContext.Response.StatusCode = StatusCodes.Status400BadRequest;
-            await httpContext.Response.WriteAsJsonAsync(new { message = exception.Message }, cancellationToken);
-            return true;
-        }
+        httpContext.Response.StatusCode = statusCode;
+        var responseMessage = statusCode == StatusCodes.Status500InternalServerError
+            ? "An unexpected error occurred."
+            : exception.Message;
 
-        return false;
+        await httpContext.Response.WriteAsJsonAsync(
+            new
+            {
+                message = responseMessage,
+                traceId = httpContext.TraceIdentifier
+            },
+            cancellationToken);
+
+        return true;
     }
 }

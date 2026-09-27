@@ -190,6 +190,35 @@ dotnet dev-certs https --trust
 
 Stop the API with `Ctrl+C`.
 
+## Logging and monitoring
+
+The API uses ASP.NET Core's built-in structured logging. Every HTTP request logs
+the method, path, response status, elapsed time, trace ID, and authenticated user
+ID. Expected application errors are logged as warnings, while unexpected errors
+include the exception and are logged at the error level. Error responses also
+contain a `traceId` that can be matched to the server logs.
+
+Logs are written to the application console. View them in Rider's run window or,
+when using Docker, follow them with:
+
+```powershell
+docker compose logs --follow api
+```
+
+Logging levels are configured in `HotelBooking.API/appsettings.json` and can be
+overridden per environment. For example, the equivalent environment variable
+for the application's log level is:
+
+```dotenv
+Logging__LogLevel__HotelBooking=Information
+```
+
+The request logger deliberately excludes query strings, request and response
+bodies, authorization headers, passwords, JWTs, payment details, and other
+sensitive values. New business-event logs should use structured placeholders,
+for example `_logger.LogInformation("Booking {BookingId} created by user
+{UserId}", bookingId, userId)`, and must follow the same rule.
+
 ## Run with Docker
 
 The repository includes a multi-stage `Dockerfile` and a `compose.yaml` file.

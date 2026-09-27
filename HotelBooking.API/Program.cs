@@ -5,6 +5,7 @@ using HotelBooking.Infrastructure.Repositories;
 using HotelBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using HotelBooking.API.ExceptionHandlers;
+using HotelBooking.API.Middleware;
 using HotelBooking.Application.Authentication.Login;
 using HotelBooking.Application.Common.Settings;
 using HotelBooking.Infrastructure.Authentication;
@@ -198,6 +199,8 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+// Keep request logging outside the exception handler so it records handled error responses too.
+app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseExceptionHandler();
 app.UseAuthentication();
 app.UseAuthorization();
