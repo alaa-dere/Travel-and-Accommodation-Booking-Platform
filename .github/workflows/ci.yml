@@ -11,9 +11,13 @@ on:
       - Alaa
       - main
 
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout repository
@@ -32,3 +36,6 @@ jobs:
 
       - name: Run automated tests
         run: dotnet test HotelBooking.sln --configuration Release --no-build
+
+      - name: Build Docker images
+        run: docker compose build api migrations

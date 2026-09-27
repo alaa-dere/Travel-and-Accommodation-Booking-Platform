@@ -1,5 +1,7 @@
 # Hotel Booking System
 
+[![Hotel Booking CI](https://github.com/alaa-dere/Travel-and-Accommodation-Booking-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/alaa-dere/Travel-and-Accommodation-Booking-Platform/actions/workflows/ci.yml)
+
 An ASP.NET Core Web API for hotel discovery and booking. The solution includes
 authentication, hotel and room administration, search, promotions, carts,
 checkout, invoices, reviews, nearby attractions, and customer recommendations.
@@ -252,6 +254,10 @@ the .NET SDK out of the API runtime image and allows Compose to require a
 successful migration before starting the API.
 
 ## Run tests
+
+GitHub Actions runs the Release build, all unit and integration tests, and builds
+the API and migration Docker images for pushes and pull requests targeting
+`Alaa` or `main`.
 
 Run all unit and integration tests:
 
