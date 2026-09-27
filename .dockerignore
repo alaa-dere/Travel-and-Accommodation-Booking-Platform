@@ -1,0 +1,17 @@
+**/bin/
+**/obj/
+
+.git/
+.gitignore
+
+.idea/
+.vs/
+.vscode/
+
+**/TestResults/
+**/CoverageReport/
+
+# Local secrets
+.env
+
+README.md

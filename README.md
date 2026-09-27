@@ -13,6 +13,8 @@ Install the following tools before setting up the project:
 - [SQL Server](https://www.microsoft.com/sql-server/sql-server-downloads), such
   as SQL Server Developer or Express, for the application database.
 - Git.
+- Optional: [Docker Desktop](https://www.docker.com/products/docker-desktop/)
+  for running the API and SQL Server with Docker Compose.
 - Optional: JetBrains Rider, Visual Studio 2022, or Visual Studio Code.
 - Optional: the EF Core CLI tool if it is not already installed.
 
@@ -69,13 +71,17 @@ The default non-secret settings are in
 `HotelBooking.API/appsettings.json`. Do not commit real passwords, JWT keys, SMTP
 credentials, or production connection strings to that file.
 
+See [Environment Configuration](docs/CONFIGURATION.md) for the complete setting
+reference, environment-specific behavior, database and authentication guidance,
+and secret-handling requirements.
+
 For local development, configure secrets from the repository root using .NET
 User Secrets:
 
 ```powershell
-dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=localhost\MSSQLSERVER01;Database=HotelBookingDb;Trusted_Connection=True;TrustServerCertificate=True" --project HotelBooking.API
-dotnet user-secrets set "Jwt:Key" "replace-with-a-long-random-key-of-at-least-32-characters" --project HotelBooking.API
-dotnet user-secrets set "Admin:Password" "replace-with-a-strong-admin-password" --project HotelBooking.API
+dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Server=<local-sql-server>;Database=<local-database>;Trusted_Connection=True;TrustServerCertificate=True" --project HotelBooking.API
+dotnet user-secrets set "Jwt:Key" "<generated-local-signing-key>" --project HotelBooking.API
+dotnet user-secrets set "Admin:Password" "<strong-local-admin-password>" --project HotelBooking.API
 ```
 
 Change the SQL Server instance in the connection string when your local instance
@@ -107,12 +113,12 @@ The application uses the following configuration sections:
 To use booking-confirmation email locally, configure the SMTP values as secrets:
 
 ```powershell
-dotnet user-secrets set "Email:Host" "smtp.example.com" --project HotelBooking.API
-dotnet user-secrets set "Email:Port" "587" --project HotelBooking.API
-dotnet user-secrets set "Email:SenderEmail" "bookings@example.com" --project HotelBooking.API
+dotnet user-secrets set "Email:Host" "<smtp-host>" --project HotelBooking.API
+dotnet user-secrets set "Email:Port" "<smtp-port>" --project HotelBooking.API
+dotnet user-secrets set "Email:SenderEmail" "<sender-address>" --project HotelBooking.API
 dotnet user-secrets set "Email:SenderName" "Hotel Booking" --project HotelBooking.API
-dotnet user-secrets set "Email:Username" "smtp-user" --project HotelBooking.API
-dotnet user-secrets set "Email:Password" "smtp-password" --project HotelBooking.API
+dotnet user-secrets set "Email:Username" "<smtp-username>" --project HotelBooking.API
+dotnet user-secrets set "Email:Password" "<smtp-password>" --project HotelBooking.API
 dotnet user-secrets set "Email:EnableSsl" "true" --project HotelBooking.API
 ```
 
@@ -171,6 +177,9 @@ Swagger is enabled only when `ASPNETCORE_ENVIRONMENT` is `Development`. Use the
 authentication endpoints to obtain a JWT, then select **Authorize** in Swagger
 and enter the token. The Swagger security scheme adds the `Bearer` prefix.
 
+For the complete endpoint list, request fields, response formats, authentication
+rules, and error responses, see the [API reference](docs/API.md).
+
 If the local HTTPS certificate is not trusted, run:
 
 ```powershell
@@ -178,6 +187,69 @@ dotnet dev-certs https --trust
 ```
 
 Stop the API with `Ctrl+C`.
+
+## Run with Docker
+
+The repository includes a multi-stage `Dockerfile` and a `compose.yaml` file.
+Docker Compose starts three services in order:
+
+1. `sqlserver` starts SQL Server 2022 and waits until it is healthy.
+2. `migrations` runs the committed Entity Framework Core migrations using
+   `dotnet-ef` 8.0.31, then exits successfully.
+3. `api` starts the published ASP.NET Core application on port `8080` as the
+   non-root `app` user.
+
+Create a `.env` file in the repository root before starting the services. The
+file is excluded from both Git and the Docker build context.
+
+```dotenv
+SQL_SA_PASSWORD=<strong-sql-server-password>
+JWT_KEY=<long-random-jwt-signing-key>
+ADMIN_PASSWORD=<strong-initial-admin-password>
+```
+
+The SQL Server password must satisfy SQL Server's password policy. Do not commit
+the `.env` file or use these development credentials in production.
+
+Build the images and start the complete application stack:
+
+```powershell
+docker compose up --build
+```
+
+After startup:
+
+- API: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/swagger`
+- SQL Server: `localhost,1433`
+
+Swagger is available because the Compose configuration sets the API environment
+to `Development`. Use `Production` and a proper secret provider for a deployed
+environment.
+
+To run the containers in the background, inspect their status and follow the API
+logs:
+
+```powershell
+docker compose up --build --detach
+docker compose ps
+docker compose logs --follow api
+```
+
+Stop and remove the containers while preserving the database volume:
+
+```powershell
+docker compose down
+```
+
+The named `sqlserver-data` volume preserves the database between container
+restarts. Running `docker compose down --volumes` also deletes that database
+volume and its data.
+
+The Dockerfile uses separate targets for dependency restoration, Release
+publishing, database migration, and the final ASP.NET runtime image. This keeps
+the .NET SDK out of the API runtime image and allows Compose to require a
+successful migration before starting the API.
 
 ## Run tests
 
@@ -215,5 +287,10 @@ Coverage files are written below each test project's `TestResults` directory.
   Server is running, and update `ConnectionStrings:DefaultConnection`.
 - **Database-table errors on startup**: run `dotnet ef database update` before
   starting the API.
+- **Docker migration failure**: inspect the migration output with
+  `docker compose logs migrations` and verify the three values in `.env`.
+- **Port already allocated**: stop the application using port `8080` or SQL
+  Server using port `1433`, or change the corresponding host port in
+  `compose.yaml`.
 - **HTTPS certificate warning**: run `dotnet dev-certs https --trust`, or use the
   HTTP endpoint for local development.

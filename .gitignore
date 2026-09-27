@@ -486,3 +486,6 @@ coverage-report/
 # Test coverage reports
 **/CoverageReport/
 **/TestResults/
+
+# Docker environment secrets
+.env
