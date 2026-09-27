@@ -6,6 +6,7 @@ using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using HotelBooking.Application.Payments;
 
 namespace HotelBooking.IntegrationTests.Infrastructure;
 
@@ -52,6 +53,13 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             {
                 services.Remove(emailSenderDescriptor);
             }
+
+            var paymentGatewayDescriptor = services.SingleOrDefault(
+                service => service.ServiceType == typeof(IPaymentGateway));
+            if (paymentGatewayDescriptor != null)
+                services.Remove(paymentGatewayDescriptor);
+
+            services.AddSingleton<IPaymentGateway, TestPaymentGateway>();
 
             services.AddSingleton<TestEmailSender>();
             services.AddSingleton<IEmailSender>(provider =>

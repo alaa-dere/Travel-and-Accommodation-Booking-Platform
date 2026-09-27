@@ -166,6 +166,34 @@ contents containing customer information.
 Integration tests replace the SMTP sender with an in-memory test implementation
 and therefore require no external mail server.
 
+## Stripe payment configuration
+
+Checkout uses Stripe Payment Intents. The `Stripe.net` NuGet dependency is
+already referenced by `HotelBooking.Infrastructure`; `dotnet restore` installs
+it with the other project dependencies.
+
+Create a Stripe test account and store its test credentials with User Secrets:
+
+```powershell
+dotnet user-secrets set "Stripe:SecretKey" "sk_test_..." --project HotelBooking.API
+dotnet user-secrets set "Stripe:PublishableKey" "pk_test_..." --project HotelBooking.API
+dotnet user-secrets set "Stripe:WebhookSecret" "whsec_..." --project HotelBooking.API
+dotnet user-secrets set "Stripe:Currency" "usd" --project HotelBooking.API
+```
+
+Install the Stripe CLI separately for local webhook forwarding, authenticate,
+and run:
+
+```powershell
+stripe login
+stripe listen --forward-to https://localhost:<api-port>/api/payments/webhooks/stripe
+```
+
+Copy the `whsec_...` value printed by `stripe listen` into
+`Stripe:WebhookSecret`. Never commit any Stripe secret key or webhook secret.
+The frontend must use Stripe.js/Elements with the publishable key so card data
+never passes through this API.
+
 ## Environment-specific behavior
 
 Select the runtime environment with `ASPNETCORE_ENVIRONMENT`. Common values are

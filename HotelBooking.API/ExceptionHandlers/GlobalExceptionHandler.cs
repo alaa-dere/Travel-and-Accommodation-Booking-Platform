@@ -23,6 +23,8 @@ public class GlobalExceptionHandler : IExceptionHandler
             UnauthorizedException => StatusCodes.Status401Unauthorized,
             NotFoundException => StatusCodes.Status404NotFound,
             BadRequestException => StatusCodes.Status400BadRequest,
+            InvalidPaymentWebhookException => StatusCodes.Status400BadRequest,
+            PaymentProviderUnavailableException => StatusCodes.Status503ServiceUnavailable,
             _ => StatusCodes.Status500InternalServerError
         };
 

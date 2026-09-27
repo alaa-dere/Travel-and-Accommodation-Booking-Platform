@@ -137,7 +137,7 @@ public class CreateBookingsService : ICreateBookingsService
 
                 var payment = await _paymentService.ProcessPaymentAsync(invoice, paymentInformation);
 
-                if (payment.Status == PaymentStatus.Failed)
+                if (payment.Status is PaymentStatus.Failed or PaymentStatus.Cancelled)
                 {
                     foreach (var booking in pricedBookings)
                     {
@@ -153,7 +153,14 @@ public class CreateBookingsService : ICreateBookingsService
                     emailConfirmationData.Add((invoice, bookingConfirmations, payment, hotelName));
                 }
 
-                paymentResults.Add(new CheckoutPaymentResultDto { Amount = payment.Amount, Status = payment.Status });
+                paymentResults.Add(new CheckoutPaymentResultDto
+                {
+                    PaymentId = payment.PaymentId,
+                    Amount = payment.Amount,
+                    Status = payment.Status,
+                    ProviderPaymentId = payment.ProviderPaymentId,
+                    ClientSecret = payment.ClientSecret
+                });
                 
                 invoiceCount++;
             }

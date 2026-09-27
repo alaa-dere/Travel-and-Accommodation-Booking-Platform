@@ -25,7 +25,8 @@ Supported enum values:
 - `HotelType`: `Luxury`, `Budget`, `Boutique`
 - `RoomType`: `Single`, `Double`, `Twin`, `Suite`
 - `BookingStatus`: `Pending`, `Confirmed`, `Cancelled`, `Completed`
-- `PaymentStatus`: `Pending`, `Paid`, `Failed`
+- `PaymentStatus`: `Pending`, `Paid`, `Failed`, `RequiresAction`, `Cancelled`,
+  `Refunded`
 
 ## Authentication and authorization
 
@@ -403,18 +404,23 @@ Request body:
 {
   "specialRequests": "Late arrival",
   "payment": {
-    "shouldSucceed": true
+    "paymentMethodId": "pm_card_visa"
   }
 }
 ```
 
 `payment` is required. `specialRequests` is optional and limited to 1000
-characters. `shouldSucceed` is the current payment simulation input.
+characters. `paymentMethodId` must be created by Stripe.js/Elements; raw card
+numbers must never be sent to this API. `pm_card_visa` is a Stripe test-mode
+payment method and must not be used in production.
 
 Success: `200 OK` with:
 
 - `bookingCount` and `invoiceCount`.
-- `payments`: items containing `amount` and `status`.
+- `payments`: items containing `paymentId`, `amount`, `status`,
+  `providerPaymentId`, and `clientSecret`. When the status is
+  `RequiresAction`, the frontend uses `clientSecret` with Stripe.js to finish
+  3-D Secure authentication.
 - `confirmations`: hotel-level items containing `confirmationId`, `hotelId`,
   `hotelName`, `totalAmount`, `paymentStatus`, and booked `rooms`.
 - Each confirmation room contains `bookingId`, `roomId`, `roomNumber`,
@@ -422,7 +428,17 @@ Success: `200 OK` with:
 
 Important errors: `400` when payment data is absent, the cart is empty, or
 special requests are too long; `404` when customer email is unavailable; `409`
-when a cart room is no longer available.
+when a cart room is no longer available; `503` when Stripe is unavailable or
+not configured.
+
+### Stripe webhook
+
+`POST /api/payments/webhooks/stripe` — Anonymous, Stripe signature required
+
+This endpoint verifies `Stripe-Signature` against the configured webhook
+secret and updates the local payment for succeeded, failed, cancelled, and
+authentication-required PaymentIntent states. Invalid signatures return
+`400`; temporary processing failures return `503` so Stripe can retry.
 
 ### Modify a booking
 

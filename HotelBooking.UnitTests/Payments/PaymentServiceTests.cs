@@ -10,14 +10,31 @@ namespace HotelBooking.UnitTests.Payments;
 public class PaymentServiceTests
 {
     private readonly Mock<IPaymentRepository> _paymentRepositoryMock;
+    private readonly Mock<IPaymentGateway> _paymentGatewayMock;
     private readonly PaymentService _service;
 
     public PaymentServiceTests()
     {
         _paymentRepositoryMock = new Mock<IPaymentRepository>();
+        _paymentGatewayMock = new Mock<IPaymentGateway>();
+        _paymentGatewayMock.SetupGet(gateway => gateway.Currency).Returns("usd");
+        _paymentGatewayMock
+            .Setup(gateway => gateway.CreateAndConfirmAsync(
+                It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync((decimal _, string _, string paymentMethodId, string _,
+                IReadOnlyDictionary<string, string> _, CancellationToken _) =>
+                new PaymentGatewayResult(
+                    "pi_test",
+                    "pi_test_secret",
+                    paymentMethodId == "pm_card_declined"
+                        ? PaymentGatewayStatus.Failed
+                        : PaymentGatewayStatus.Succeeded));
 
         _service = new PaymentService(
-            _paymentRepositoryMock.Object);
+            _paymentRepositoryMock.Object,
+            _paymentGatewayMock.Object);
     }
 
     [Fact]
@@ -28,7 +45,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = true
+            PaymentMethodId = "pm_card_visa"
         };
 
         // Act
@@ -48,7 +65,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = false
+            PaymentMethodId = "pm_card_declined"
         };
 
         // Act
@@ -68,7 +85,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = true
+            PaymentMethodId = "pm_card_visa"
         };
 
         // Act
@@ -88,7 +105,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = true
+            PaymentMethodId = "pm_card_visa"
         };
 
         // Act
@@ -108,7 +125,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = true
+            PaymentMethodId = "pm_card_visa"
         };
 
         Payment? addedPayment = null;
@@ -142,7 +159,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = true
+            PaymentMethodId = "pm_card_visa"
         };
 
         // Act
@@ -168,7 +185,7 @@ public class PaymentServiceTests
 
         var paymentInformation = new PaymentInformationDto
         {
-            ShouldSucceed = false
+            PaymentMethodId = "pm_card_declined"
         };
 
         // Act

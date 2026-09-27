@@ -53,6 +53,7 @@ using HotelBooking.Application.NearbyAttractions.Update;
 using HotelBooking.Application.Promotions.Create;
 using HotelBooking.Application.Promotions.Status;
 using HotelBooking.Infrastructure.Services;
+using HotelBooking.Infrastructure.Payments;
 using QuestPDF.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -94,6 +95,7 @@ builder.Services.AddControllers()
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
+builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(StripeSettings.SectionName));
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey))
@@ -169,6 +171,8 @@ builder.Services.AddScoped<IBookingTransactionManager, BookingTransactionManager
 builder.Services.AddScoped<ICreateBookingsService, CreateBookingsService>();
 builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+builder.Services.AddScoped<IPaymentWebhookService, PaymentWebhookService>();
 builder.Services.AddScoped<IGetInvoiceForPdfService, GetInvoiceForPdfService>();
 builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));

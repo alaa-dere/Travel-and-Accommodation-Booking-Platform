@@ -1,6 +1,5 @@
 using HotelBooking.Application.Bookings;
 using HotelBooking.Application.Bookings.Dtos;
-using HotelBooking.Application.Checkout.Dtos;
 using HotelBooking.Application.Emails;
 using HotelBooking.Application.Emails.Dtos;
 using HotelBooking.Application.Exceptions;
@@ -11,7 +10,7 @@ using HotelBooking.Domain.Entities;
 using HotelBooking.Domain.Enums;
 using Moq;
 
-namespace HotelBooking.UnitTests.Bookings;
+namespace HotelBooking.UnitTests.Bookings.Create;
 
 public class CreateBookingsServiceTests
 {
@@ -579,7 +578,7 @@ public class CreateBookingsServiceTests
     {
         return new PaymentInformationDto
         {
-            ShouldSucceed = true
+            PaymentMethodId = "pm_card_visa"
         };
     }
 

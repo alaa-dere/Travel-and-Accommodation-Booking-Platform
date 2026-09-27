@@ -431,7 +431,10 @@ public class CheckoutControllerTests : IClassFixture<CustomWebApplicationFactory
     private static CompleteCheckoutRequestDto ValidRequest(bool shouldSucceed = true, string? specialRequests = null) => new()
     {
         SpecialRequests = specialRequests,
-        Payment = new PaymentInformationDto { ShouldSucceed = shouldSucceed }
+        Payment = new PaymentInformationDto
+        {
+            PaymentMethodId = shouldSucceed ? "pm_card_visa" : "pm_card_declined"
+        }
     };
 
     private static string Unique(string prefix) => $"{prefix}_{Guid.NewGuid():N}";
