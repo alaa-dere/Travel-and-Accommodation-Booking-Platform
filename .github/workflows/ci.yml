@@ -1,0 +1,41 @@
+name: Hotel Booking CI
+
+on:
+  push:
+    branches:
+      - Alaa
+      - main
+
+  pull_request:
+    branches:
+      - Alaa
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore dependencies
+        run: dotnet restore HotelBooking.sln
+
+      - name: Build solution
+        run: dotnet build HotelBooking.sln --configuration Release --no-restore
+
+      - name: Run automated tests
+        run: dotnet test HotelBooking.sln --configuration Release --no-build
+
+      - name: Build Docker images
+        run: docker compose build api migrations
