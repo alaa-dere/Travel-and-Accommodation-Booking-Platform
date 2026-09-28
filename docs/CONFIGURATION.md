@@ -49,6 +49,9 @@ test-result directories are excluded from this repository where applicable.
 | `Email:Username` | `Email__Username` | When required by SMTP | Confidential SMTP username. |
 | `Email:Password` | `Email__Password` | When required by SMTP | Confidential SMTP password. |
 | `Email:EnableSsl` | `Email__EnableSsl` | For email delivery | Whether the SMTP connection uses TLS/SSL. |
+| `RabbitMq:Host` | `RabbitMq__Host` | Yes | RabbitMQ hostname for asynchronous checkout tasks. |
+| `RabbitMq:Username` | `RabbitMq__Username` | Yes | RabbitMQ application username. |
+| `RabbitMq:Password` | `RabbitMq__Password` | Yes | Confidential RabbitMQ password. |
 | `AllowedHosts` | `AllowedHosts` | Hosting-dependent | Host-header allowlist. Do not leave unrestricted in production without review. |
 | `Logging:LogLevel:Default` | `Logging__LogLevel__Default` | No | Default application logging level. |
 | `Logging:LogLevel:Microsoft.AspNetCore` | `Logging__LogLevel__Microsoft.AspNetCore` | No | ASP.NET Core logging level. |
@@ -165,6 +168,17 @@ contents containing customer information.
 
 Integration tests replace the SMTP sender with an in-memory test implementation
 and therefore require no external mail server.
+
+## RabbitMQ configuration
+
+Booking-confirmation emails and failed-refund retries use RabbitMQ through
+MassTransit. Docker Compose starts RabbitMQ on port `5672` and exposes its
+management UI on port `15672`.
+
+For Docker, define `RABBITMQ_PASSWORD` locally. `RABBITMQ_USER` is optional and
+defaults to `hotelbooking`. Never commit broker credentials. When running the
+API outside Docker, RabbitMQ must be reachable through the `RabbitMq` settings.
+The Testing environment does not require an external broker.
 
 ## Stripe payment configuration
 

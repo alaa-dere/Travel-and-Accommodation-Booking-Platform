@@ -1,3 +1,4 @@
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Application.Payments;
 using HotelBooking.Application.Payments.Dtos;
@@ -9,16 +10,16 @@ namespace HotelBooking.UnitTests.Payments;
 
 public class PaymentServiceTests
 {
-    private readonly Mock<IPaymentRepository> _paymentRepositoryMock;
-    private readonly Mock<IPaymentGateway> _paymentGatewayMock;
+    private static readonly DateTime UtcNow =
+        new(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc);
+    private readonly Mock<IPaymentRepository> _paymentRepository = new();
+    private readonly Mock<IPaymentGateway> _paymentGateway = new();
     private readonly PaymentService _service;
 
     public PaymentServiceTests()
     {
-        _paymentRepositoryMock = new Mock<IPaymentRepository>();
-        _paymentGatewayMock = new Mock<IPaymentGateway>();
-        _paymentGatewayMock.SetupGet(gateway => gateway.Currency).Returns("usd");
-        _paymentGatewayMock
+        _paymentGateway.SetupGet(gateway => gateway.Currency).Returns("usd");
+        _paymentGateway
             .Setup(gateway => gateway.CreateAndConfirmAsync(
                 It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, string>>(),
@@ -33,184 +34,143 @@ public class PaymentServiceTests
                         : PaymentGatewayStatus.Succeeded));
 
         _service = new PaymentService(
-            _paymentRepositoryMock.Object,
-            _paymentGatewayMock.Object);
+            _paymentRepository.Object,
+            _paymentGateway.Object,
+            new FixedTimeProvider(UtcNow));
     }
 
     [Fact]
-    public async Task ProcessPaymentAsync_WhenPaymentShouldSucceed_ShouldMarkPaymentAsPaid()
+    public async Task CreatePendingPaymentAsync_ShouldCreateAndAddPendingPayment()
     {
-        // Arrange
         var invoice = CreateInvoice();
 
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_visa"
-        };
+        var payment = await _service.CreatePendingPaymentAsync(invoice);
 
-        // Act
-        var result = await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
-
-        // Assert
-        Assert.Equal(PaymentStatus.Paid, result.Status);
+        Assert.Equal(invoice.TotalAmount, payment.Amount);
+        Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.Same(invoice, payment.Invoice);
+        _paymentRepository.Verify(repository => repository.AddAsync(payment), Times.Once);
+        _paymentGateway.Verify(gateway => gateway.CreateAndConfirmAsync(
+            It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, string>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
     }
 
-    [Fact]
-    public async Task ProcessPaymentAsync_WhenPaymentShouldFail_ShouldMarkPaymentAsFailed()
+    [Theory]
+    [InlineData("pm_card_visa", PaymentStatus.Paid)]
+    [InlineData("pm_card_declined", PaymentStatus.Failed)]
+    public async Task ProcessPaymentAsync_ShouldApplyProviderResult(
+        string paymentMethodId,
+        PaymentStatus expectedStatus)
     {
-        // Arrange
-        var invoice = CreateInvoice();
+        var payment = CreateSavedPayment();
 
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_declined"
-        };
-
-        // Act
-        var result = await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
-
-        // Assert
-        Assert.Equal(PaymentStatus.Failed, result.Status);
-    }
-
-    [Fact]
-    public async Task ProcessPaymentAsync_ShouldCreatePaymentWithInvoiceTotalAmount()
-    {
-        // Arrange
-        var invoice = CreateInvoice();
-
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_visa"
-        };
-
-        // Act
-        var result = await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
-
-        // Assert
-        Assert.Equal(invoice.TotalAmount, result.Amount);
-    }
-
-    [Fact]
-    public async Task ProcessPaymentAsync_ShouldAssociatePaymentWithInvoice()
-    {
-        // Arrange
-        var invoice = CreateInvoice();
-
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_visa"
-        };
-
-        // Act
-        var result = await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
-
-        // Assert
-        Assert.Same(invoice, result.Invoice);
-    }
-
-    [Fact]
-    public async Task ProcessPaymentAsync_ShouldAddPaymentToRepository()
-    {
-        // Arrange
-        var invoice = CreateInvoice();
-
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_visa"
-        };
-
-        Payment? addedPayment = null;
-
-        _paymentRepositoryMock
-            .Setup(repository =>
-                repository.AddAsync(It.IsAny<Payment>()))
-            .Callback<Payment>(payment =>
-                addedPayment = payment);
-
-        // Act
-        var result = await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
-
-        // Assert
-        Assert.NotNull(addedPayment);
-        Assert.Same(result, addedPayment);
-
-        _paymentRepositoryMock.Verify(
-            repository =>
-                repository.AddAsync(It.IsAny<Payment>()),
-            Times.Once);
-    }
-
-    [Fact]
-    public async Task ProcessPaymentAsync_WhenPaymentSucceeds_ShouldAddPaidPayment()
-    {
-        // Arrange
-        var invoice = CreateInvoice();
-
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_visa"
-        };
-
-        // Act
         await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
+            payment,
+            new PaymentInformationDto { PaymentMethodId = paymentMethodId });
 
-        // Assert
-        _paymentRepositoryMock.Verify(
-            repository => repository.AddAsync(
-                It.Is<Payment>(payment =>
-                    payment.Amount == invoice.TotalAmount &&
-                    payment.Status == PaymentStatus.Paid &&
-                    payment.Invoice == invoice)),
-            Times.Once);
+        Assert.Equal(expectedStatus, payment.Status);
+        Assert.Equal("pi_test", payment.ProviderPaymentId);
     }
 
     [Fact]
-    public async Task ProcessPaymentAsync_WhenPaymentFails_ShouldAddFailedPayment()
+    public async Task ProcessPaymentAsync_ShouldUseStablePaymentIdForIdempotencyAndMetadata()
     {
-        // Arrange
-        var invoice = CreateInvoice();
+        var payment = CreateSavedPayment();
 
-        var paymentInformation = new PaymentInformationDto
-        {
-            PaymentMethodId = "pm_card_declined"
-        };
-
-        // Act
         await _service.ProcessPaymentAsync(
-            invoice,
-            paymentInformation);
+            payment,
+            new PaymentInformationDto { PaymentMethodId = "pm_card_visa" });
 
-        // Assert
-        _paymentRepositoryMock.Verify(
-            repository => repository.AddAsync(
-                It.Is<Payment>(payment =>
-                    payment.Amount == invoice.TotalAmount &&
-                    payment.Status == PaymentStatus.Failed &&
-                    payment.Invoice == invoice)),
-            Times.Once);
+        _paymentGateway.Verify(gateway => gateway.CreateAndConfirmAsync(
+            payment.Amount,
+            "usd",
+            "pm_card_visa",
+            $"payment-{payment.PaymentId}",
+            It.Is<IReadOnlyDictionary<string, string>>(metadata =>
+                metadata["paymentId"] == payment.PaymentId.ToString() &&
+                metadata["invoiceId"] == payment.InvoiceId.ToString()),
+            It.IsAny<CancellationToken>()), Times.Once);
     }
 
-    private static Invoice CreateInvoice()
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenPaymentIsNotSaved_ShouldRejectBeforeCallingProvider()
     {
-        return new Invoice(
-            userId: 1,
-            hotelId: 10,
-            totalAmount: 350m)
+        var payment = new Payment(350m, UtcNow);
+        payment.AssignToInvoice(CreateInvoice());
+
+        var action = () => _service.ProcessPaymentAsync(
+            payment,
+            new PaymentInformationDto { PaymentMethodId = "pm_card_visa" });
+
+        await Assert.ThrowsAsync<InvalidOperationException>(action);
+        _paymentGateway.Verify(gateway => gateway.CreateAndConfirmAsync(
+            It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(),
+            It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, string>>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenPaymentMethodIsMissing_ShouldThrowBadRequest()
+    {
+        var payment = CreateSavedPayment();
+
+        var action = () => _service.ProcessPaymentAsync(
+            payment,
+            new PaymentInformationDto { PaymentMethodId = " " });
+
+        await Assert.ThrowsAsync<BadRequestException>(action);
+    }
+
+    [Theory]
+    [InlineData(PaymentGatewayStatus.Pending, PaymentStatus.Pending)]
+    [InlineData(PaymentGatewayStatus.RequiresAction, PaymentStatus.RequiresAction)]
+    public async Task ProcessPaymentAsync_ShouldPreserveNonFinalProviderStatus(
+        PaymentGatewayStatus gatewayStatus,
+        PaymentStatus expectedStatus)
+    {
+        var payment = CreateSavedPayment();
+        _paymentGateway
+            .Setup(gateway => gateway.CreateAndConfirmAsync(
+                It.IsAny<decimal>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<string>(), It.IsAny<IReadOnlyDictionary<string, string>>(),
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new PaymentGatewayResult(
+                "pi_test",
+                "pi_test_secret",
+                gatewayStatus));
+
+        await _service.ProcessPaymentAsync(
+            payment,
+            new PaymentInformationDto { PaymentMethodId = "pm_card_visa" });
+
+        Assert.Equal(expectedStatus, payment.Status);
+        Assert.Null(payment.ProcessedAt);
+    }
+
+    [Fact]
+    public async Task ProcessPaymentAsync_WhenInformationIsNull_ShouldThrowBadRequest()
+    {
+        var action = () => _service.ProcessPaymentAsync(CreateSavedPayment(), null!);
+
+        await Assert.ThrowsAsync<BadRequestException>(action);
+    }
+
+    private static Payment CreateSavedPayment()
+    {
+        var invoice = CreateInvoice();
+        var payment = new Payment(invoice.TotalAmount, UtcNow)
         {
-            InvoiceId = 100
+            PaymentId = 25,
         };
+        payment.AssignToInvoice(invoice);
+        return payment;
+    }
+
+    private static Invoice CreateInvoice() => new(1, 10, 350m) { InvoiceId = 100 };
+
+    private sealed class FixedTimeProvider(DateTime utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(utcNow);
     }
 }

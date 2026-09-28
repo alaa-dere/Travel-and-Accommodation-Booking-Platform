@@ -15,7 +15,9 @@ public class CancelBookingServiceTests
     public CancelBookingServiceTests()
     {
         _bookingRepositoryMock = new Mock<IBookingRepository>();
-        _service = new CancelBookingService(_bookingRepositoryMock.Object);
+        _service = new CancelBookingService(
+            _bookingRepositoryMock.Object,
+            TimeProvider.System);
     }
 
     [Fact]
@@ -56,7 +58,7 @@ public class CancelBookingServiceTests
     {
         // Arrange
         var booking = CreateValidBooking();
-        booking.Cancel();
+        booking.Cancel(booking.CreatedAt);
 
         _bookingRepositoryMock.Setup(repository => repository.GetByIdForUserAsync(1, 1)).ReturnsAsync(booking);
 
@@ -114,7 +116,7 @@ public class CancelBookingServiceTests
 
     private static Booking CreateValidBooking(DateTime? checkIn = null, DateTime? checkOut = null)
     {
-        return new Booking(
+        return BookingTestFactory.Create(
             userId: 1,
             roomId: 1,
             checkIn: checkIn ?? DateTime.UtcNow.AddDays(2),
@@ -126,6 +128,8 @@ public class CancelBookingServiceTests
             discountPercentage: 0,
             discountAmount: 0m,
             totalPrice: 200m,
-            specialRequests: null);
+            specialRequests: null,
+            createdAt: DateTime.UtcNow,
+            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
     }
 }

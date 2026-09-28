@@ -5,5 +5,6 @@ namespace HotelBooking.Application.Payments;
 
 public interface IPaymentService
 {
-    Task<Payment> ProcessPaymentAsync(Invoice invoice, PaymentInformationDto paymentInformation);
+    Task<Payment> CreatePendingPaymentAsync(Invoice invoice);
+    Task ProcessPaymentAsync(Payment payment, PaymentInformationDto paymentInformation);
 }

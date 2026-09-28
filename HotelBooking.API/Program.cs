@@ -5,6 +5,7 @@ using HotelBooking.Infrastructure.Repositories;
 using HotelBooking.Infrastructure.Security;
 using Microsoft.EntityFrameworkCore;
 using HotelBooking.API.ExceptionHandlers;
+using HotelBooking.API.BackgroundServices;
 using HotelBooking.API.Middleware;
 using HotelBooking.Application.Authentication.Login;
 using HotelBooking.Application.Common.Settings;
@@ -15,6 +16,7 @@ using System.Text;
 using HotelBooking.Application;
 using HotelBooking.Application.AvailableRooms;
 using HotelBooking.Application.Bookings;
+using HotelBooking.Application.Bookings.Expiration;
 using HotelBooking.Application.Cart;
 using HotelBooking.Application.Cart.Create;
 using HotelBooking.Application.Cities;
@@ -55,6 +57,7 @@ using HotelBooking.Application.Promotions.Status;
 using HotelBooking.Infrastructure.Services;
 using HotelBooking.Infrastructure.Payments;
 using QuestPDF.Infrastructure;
+using HotelBooking.Infrastructure.Messaging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -96,6 +99,23 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(StripeSettings.SectionName));
+var bookingSettings = builder.Configuration
+    .GetSection(BookingSettings.SectionName)
+    .Get<BookingSettings>() ?? new BookingSettings();
+if (bookingSettings.PendingExpirationMinutes <= 0)
+{
+    throw new InvalidOperationException("Booking pending expiration must be greater than zero minutes.");
+}
+if (bookingSettings.ExpirationBatchSize <= 0)
+{
+    throw new InvalidOperationException("Booking expiration batch size must be greater than zero.");
+}
+if (bookingSettings.ExpirationCheckIntervalSeconds <= 0)
+{
+    throw new InvalidOperationException("Booking expiration check interval must be greater than zero seconds.");
+}
+builder.Services.AddSingleton(bookingSettings);
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
 var jwtKey = builder.Configuration["Jwt:Key"];
 if (string.IsNullOrWhiteSpace(jwtKey))
@@ -164,6 +184,8 @@ builder.Services.AddScoped<IGetCartService, GetCartService>();
 builder.Services.AddScoped<IRemoveCartItemService, RemoveCartItemService>();
 builder.Services.AddScoped<IBookingRepository, BookingRepository>();
 builder.Services.AddScoped<IBookingAvailabilityService, BookingAvailabilityService>();
+builder.Services.AddScoped<IExpirePendingBookingsService, ExpirePendingBookingsService>();
+builder.Services.AddHostedService<ExpiredPendingBookingsWorker>();
 builder.Services.AddScoped<IPromotionRepository, PromotionRepository>();
 builder.Services.AddScoped<IBookingPricingService, BookingPricingService>();
 builder.Services.AddScoped<IInvoiceRepository, InvoiceRepository>();
@@ -177,7 +199,7 @@ builder.Services.AddScoped<IGetInvoiceForPdfService, GetInvoiceForPdfService>();
 builder.Services.AddScoped<IInvoicePdfGenerator, InvoicePdfGenerator>();
 builder.Services.Configure<EmailSettings>(builder.Configuration.GetSection(EmailSettings.SectionName));
 builder.Services.AddScoped<IEmailSender, SmtpEmailSender>();
-builder.Services.AddScoped<IBookingConfirmationEmailService, BookingConfirmationEmailService>();
+builder.Services.AddHotelBookingMessaging(builder.Configuration, builder.Environment);
 builder.Services.AddScoped<IModifyBookingService, ModifyBookingService>();
 builder.Services.AddScoped<ICancelBookingService, CancelBookingService>();
 builder.Services.AddScoped<ICreatePromotionService, CreatePromotionService>();

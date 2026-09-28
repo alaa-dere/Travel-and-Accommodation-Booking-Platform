@@ -25,6 +25,27 @@ public sealed class TestPaymentGateway : IPaymentGateway
             status == PaymentGatewayStatus.Failed ? "card_declined" : null));
     }
 
-    public PaymentWebhookEvent ParseWebhook(string payload, string signature) =>
-        new("evt_test", "pi_test", PaymentGatewayStatus.Succeeded);
+    public Task<PaymentGatewayStatus> CancelAsync(
+        string providerPaymentId,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(PaymentGatewayStatus.Cancelled);
+    }
+
+    public Task<RefundGatewayResult> RefundAsync(
+        string providerPaymentId,
+        string idempotencyKey,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new RefundGatewayResult(
+            "re_test",
+            RefundGatewayStatus.Succeeded));
+    }
+
+    public PaymentProviderWebhookEvent ParseWebhook(string payload, string signature) =>
+        new(
+            "evt_test",
+            PaymentProviderWebhookEventType.Payment,
+            "pi_test",
+            PaymentStatus: PaymentGatewayStatus.Succeeded);
 }

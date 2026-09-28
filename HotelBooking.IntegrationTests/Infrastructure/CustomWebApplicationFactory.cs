@@ -35,6 +35,10 @@ public class CustomWebApplicationFactory : WebApplicationFactory<Program>
             "Jwt:ExpirationMinutes",
             "60");
 
+        builder.UseSetting(
+            "Booking:EnableExpirationWorker",
+            "false");
+
         builder.ConfigureServices(services =>
         {
             var descriptor = services.SingleOrDefault(

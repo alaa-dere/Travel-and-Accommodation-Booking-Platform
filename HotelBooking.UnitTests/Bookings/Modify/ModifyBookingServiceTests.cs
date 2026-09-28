@@ -31,7 +31,8 @@ public class ModifyBookingServiceTests
             _availabilityServiceMock.Object,
             _pricingServiceMock.Object,
             _transactionManagerMock.Object,
-            _roomRepositoryMock.Object);
+            _roomRepositoryMock.Object,
+            TimeProvider.System);
     }
 
     [Fact]
@@ -389,7 +390,7 @@ public class ModifyBookingServiceTests
     {
         var booking = CreateBooking();
 
-        var secondBooking = new Booking(
+        var secondBooking = BookingTestFactory.Create(
             userId: 1,
             roomId: 3,
             checkIn: DateTime.UtcNow.AddDays(5),
@@ -401,7 +402,9 @@ public class ModifyBookingServiceTests
             discountPercentage: 0,
             discountAmount: 0m,
             totalPrice: 100m,
-            specialRequests: null);
+            specialRequests: null,
+            createdAt: DateTime.UtcNow,
+            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
 
         booking.Invoice!.Bookings.Add(secondBooking);
 
@@ -454,7 +457,7 @@ public class ModifyBookingServiceTests
         DateTime? checkIn = null,
         DateTime? checkOut = null)
     {
-        var booking = new Booking(
+        var booking = BookingTestFactory.Create(
             userId: 1,
             roomId: 1,
             checkIn: checkIn ?? DateTime.UtcNow.AddDays(5),
@@ -466,10 +469,10 @@ public class ModifyBookingServiceTests
             discountPercentage: 0,
             discountAmount: 0m,
             totalPrice: 200m,
-            specialRequests: null)
-        {
-            BookingId = 1
-        };
+            specialRequests: null,
+            createdAt: DateTime.UtcNow,
+            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
+        booking.BookingId = 1;
 
         var invoice = new Invoice(
             userId: 1,

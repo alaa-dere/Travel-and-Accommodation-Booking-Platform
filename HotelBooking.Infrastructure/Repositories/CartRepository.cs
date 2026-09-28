@@ -29,6 +29,15 @@ public class CartRepository : ICartRepository
             .ToListAsync();
     }
 
+    public Task<int?> GetCartHotelIdAsync(int userId)
+    {
+        return _dbContext.CartItems
+            .AsNoTracking()
+            .Where(cartItem => cartItem.UserId == userId)
+            .Select(cartItem => (int?)cartItem.Room!.HotelId)
+            .FirstOrDefaultAsync();
+    }
+
     public async Task<CartItem?> GetByIdAsync(int cartItemId)
     {
         return await _dbContext.CartItems

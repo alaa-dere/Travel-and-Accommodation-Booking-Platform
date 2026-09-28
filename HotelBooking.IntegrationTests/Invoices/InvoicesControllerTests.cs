@@ -13,6 +13,8 @@ namespace HotelBooking.IntegrationTests.Invoices;
 
 public class InvoicesControllerTests : IClassFixture<CustomWebApplicationFactory>
 {
+    private static readonly DateTime UtcNow =
+        new(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc);
     private readonly CustomWebApplicationFactory _factory;
 
     public InvoicesControllerTests(CustomWebApplicationFactory factory)
@@ -219,9 +221,9 @@ public class InvoicesControllerTests : IClassFixture<CustomWebApplicationFactory
         var invoice = new Invoice(user.UserId, hotel.HotelId, amount);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
-        var payment = new Payment(amount) { InvoiceId = invoice.InvoiceId };
-        if (paymentStatus == PaymentStatus.Paid) payment.MarkAsPaid();
-        else payment.MarkAsFailed();
+        var payment = new Payment(amount, UtcNow) { InvoiceId = invoice.InvoiceId };
+        if (paymentStatus == PaymentStatus.Paid) payment.MarkAsPaid(UtcNow);
+        else payment.MarkAsFailed(null, UtcNow);
         db.Payments.Add(payment);
         await db.SaveChangesAsync();
         return invoice;
@@ -241,11 +243,9 @@ public class InvoicesControllerTests : IClassFixture<CustomWebApplicationFactory
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
-        var booking = new Booking(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
-            pricePerNight, originalTotal, discountPercentage, discountAmount, total, null)
-        {
-            InvoiceId = invoice.InvoiceId
-        };
+        var booking = BookingTestFactory.Create(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
+            pricePerNight, originalTotal, discountPercentage, discountAmount, total, null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1));
+        booking.InvoiceId = invoice.InvoiceId;
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
         return booking;

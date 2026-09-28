@@ -1,4 +1,5 @@
 using HotelBooking.Domain.Entities;
+using HotelBooking.Domain.ValueObjects;
 
 namespace HotelBooking.UnitTests.Domain.Entities;
 
@@ -14,7 +15,7 @@ public class BookingTests
         var beforeCreation = DateTime.UtcNow;
 
         // Act
-        var booking = new Booking(
+        var booking = BookingTestFactory.Create(
             userId: 1,
             roomId: 10,
             checkIn: checkIn,
@@ -26,7 +27,9 @@ public class BookingTests
             discountPercentage: 10,
             discountAmount: 30m,
             totalPrice: 270m,
-            specialRequests: "Late check-in");
+            specialRequests: "Late check-in",
+            createdAt: DateTime.UtcNow,
+            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
 
         var afterCreation = DateTime.UtcNow;
 
@@ -249,7 +252,7 @@ public class BookingTests
         var booking = CreateValidBooking();
 
         // Act
-        booking.Cancel();
+        booking.Cancel(booking.CreatedAt);
 
         // Assert
         Assert.Equal(
@@ -263,20 +266,216 @@ public class BookingTests
         // Arrange
         var booking = CreateValidBooking();
 
-        var beforeCancel = DateTime.UtcNow;
-
         // Act
-        booking.Cancel();
-
-        var afterCancel = DateTime.UtcNow;
+        booking.Cancel(booking.CreatedAt);
 
         // Assert
-        Assert.NotNull(booking.UpdatedAt);
+        Assert.Equal(booking.CreatedAt, booking.UpdatedAt);
+    }
 
-        Assert.InRange(
-            booking.UpdatedAt!.Value,
-            beforeCancel,
-            afterCancel);
+    [Fact]
+    public void Confirm_WhenBookingIsPending_ShouldChangeStatusToConfirmedAndSetUpdatedAt()
+    {
+        var booking = CreateValidBooking();
+        booking.Confirm(booking.CreatedAt);
+
+        Assert.Equal(BookingStatus.Confirmed, booking.BookingStatus);
+        Assert.Equal(booking.CreatedAt, booking.UpdatedAt);
+    }
+
+    [Fact]
+    public void Confirm_WhenBookingIsCancelled_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        booking.Cancel(booking.CreatedAt);
+
+        var action = () => booking.Confirm(booking.CreatedAt);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Cancelled, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void Confirm_WhenBookingIsAlreadyConfirmed_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        booking.Confirm(booking.CreatedAt);
+
+        var action = () => booking.Confirm(booking.CreatedAt);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Confirmed, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void Constructor_WhenPendingExpirationIsNotUtc_ShouldThrowArgumentException()
+    {
+        var action = () => CreateValidBooking(
+            pendingExpiresAt: DateTime.Now.AddHours(1));
+
+        Assert.Throws<ArgumentException>(action);
+    }
+
+    [Fact]
+    public void Constructor_WhenPendingExpirationIsNotAfterCreation_ShouldThrowArgumentException()
+    {
+        var createdAt = new DateTime(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+
+        var action = () => CreateValidBooking(
+            createdAt: createdAt,
+            pendingExpiresAt: createdAt);
+
+        Assert.Throws<ArgumentException>(action);
+    }
+
+    [Fact]
+    public void Expire_WhenPendingDeadlineHasPassed_ShouldCancelBooking()
+    {
+        var expiresAt = new DateTime(2030, 1, 1, 10, 15, 0, DateTimeKind.Utc);
+        var booking = CreateValidBooking(
+            createdAt: expiresAt.AddMinutes(-15),
+            pendingExpiresAt: expiresAt);
+
+        booking.Expire(expiresAt);
+
+        Assert.Equal(BookingStatus.Cancelled, booking.BookingStatus);
+        Assert.Equal(expiresAt, booking.UpdatedAt);
+    }
+
+    [Fact]
+    public void Expire_WhenDeadlineHasNotPassed_ShouldThrowInvalidOperationException()
+    {
+        var expiresAt = new DateTime(2030, 1, 1, 10, 15, 0, DateTimeKind.Utc);
+        var booking = CreateValidBooking(
+            createdAt: expiresAt.AddMinutes(-15),
+            pendingExpiresAt: expiresAt);
+
+        var action = () => booking.Expire(expiresAt.AddTicks(-1));
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Pending, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void Expire_WhenBookingIsNotPending_ShouldThrowInvalidOperationException()
+    {
+        var expiresAt = new DateTime(2030, 1, 1, 10, 15, 0, DateTimeKind.Utc);
+        var booking = CreateValidBooking(
+            createdAt: expiresAt.AddMinutes(-15),
+            pendingExpiresAt: expiresAt);
+        booking.Confirm(booking.CreatedAt);
+
+        var action = () => booking.Expire(expiresAt);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Confirmed, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void Complete_WhenConfirmedStayHasEnded_ShouldMarkBookingCompleted()
+    {
+        var booking = CreateValidBooking();
+        booking.Confirm(booking.CreatedAt);
+        var completedAt = DateTime.SpecifyKind(booking.CheckOut.AddHours(1), DateTimeKind.Utc);
+
+        booking.Complete(completedAt);
+
+        Assert.Equal(BookingStatus.Completed, booking.BookingStatus);
+        Assert.Equal(completedAt, booking.UpdatedAt);
+    }
+
+    [Fact]
+    public void Complete_WhenCheckoutIsInFuture_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        booking.Confirm(booking.CreatedAt);
+        var beforeCheckout = DateTime.SpecifyKind(booking.CheckOut.AddTicks(-1), DateTimeKind.Utc);
+
+        var action = () => booking.Complete(beforeCheckout);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Confirmed, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void Cancel_WhenBookingIsCompleted_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        booking.Confirm(booking.CreatedAt);
+        booking.Complete(DateTime.SpecifyKind(booking.CheckOut.AddHours(1), DateTimeKind.Utc));
+
+        var action = () => booking.Cancel(
+            DateTime.SpecifyKind(booking.CheckOut.AddHours(2), DateTimeKind.Utc));
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Completed, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void CancelByCustomer_WhenStayHasStarted_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        var stayStartedAt = DateTime.SpecifyKind(booking.CheckIn, DateTimeKind.Utc);
+
+        var action = () => booking.CancelByCustomer(stayStartedAt);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Pending, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void Modify_WhenBookingIsCancelled_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        var utcNow = DateTime.SpecifyKind(booking.CheckIn.AddDays(-1), DateTimeKind.Utc);
+        booking.Cancel(utcNow);
+        var stay = new BookingStay(20, booking.CheckIn, booking.CheckOut, 2, 0);
+        var price = new BookingPrice(100m, 300m, 0, 0m, 300m);
+
+        var action = () => booking.Modify(stay, price, null, utcNow);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Equal(BookingStatus.Cancelled, booking.BookingStatus);
+    }
+
+    [Fact]
+    public void AssignToInvoice_WhenInvoiceBelongsToUser_ShouldSetBothSidesOfRelationship()
+    {
+        var booking = CreateValidBooking();
+        var invoice = new Invoice(booking.UserId, 1, booking.TotalPrice);
+
+        booking.AssignToInvoice(invoice);
+
+        Assert.Same(invoice, booking.Invoice);
+        Assert.Contains(booking, invoice.Bookings);
+    }
+
+    [Fact]
+    public void AssignToInvoice_WhenInvoiceBelongsToAnotherUser_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        var invoice = new Invoice(booking.UserId + 1, 1, booking.TotalPrice);
+
+        var action = () => booking.AssignToInvoice(invoice);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Null(booking.Invoice);
+        Assert.DoesNotContain(booking, invoice.Bookings);
+    }
+
+    [Fact]
+    public void AssignToInvoice_WhenBookingHasAnotherInvoice_ShouldThrowInvalidOperationException()
+    {
+        var booking = CreateValidBooking();
+        var firstInvoice = new Invoice(booking.UserId, 1, booking.TotalPrice);
+        var secondInvoice = new Invoice(booking.UserId, 1, booking.TotalPrice);
+        booking.AssignToInvoice(firstInvoice);
+
+        var action = () => booking.AssignToInvoice(secondInvoice);
+
+        Assert.Throws<InvalidOperationException>(action);
+        Assert.Same(firstInvoice, booking.Invoice);
+        Assert.DoesNotContain(booking, secondInvoice.Bookings);
     }
 
     [Fact]
@@ -290,17 +489,10 @@ public class BookingTests
 
         // Act
         booking.Modify(
-            roomId: 20,
-            checkIn: newCheckIn,
-            checkOut: newCheckOut,
-            adults: 3,
-            children: 2,
-            pricePerNight: 150m,
-            originalTotalPrice: 600m,
-            discountPercentage: 20,
-            discountAmount: 120m,
-            totalPrice: 480m,
-            specialRequests: "Updated request");
+            new BookingStay(20, newCheckIn, newCheckOut, 3, 2),
+            new BookingPrice(150m, 600m, 20, 120m, 480m),
+            "Updated request",
+            new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
 
         // Assert
         Assert.Equal(20, booking.RoomId);
@@ -324,20 +516,14 @@ public class BookingTests
         // Arrange
         var booking = CreateValidBooking();
 
-        var beforeModify = DateTime.UtcNow;
+        var expectedUpdatedAt = new DateTime(
+            2026, 10, 1, 0, 0, 0, DateTimeKind.Utc);
 
         // Act
         ModifyWithValidData(booking);
 
-        var afterModify = DateTime.UtcNow;
-
         // Assert
-        Assert.NotNull(booking.UpdatedAt);
-
-        Assert.InRange(
-            booking.UpdatedAt!.Value,
-            beforeModify,
-            afterModify);
+        Assert.Equal(expectedUpdatedAt, booking.UpdatedAt);
     }
 
     [Theory]
@@ -356,7 +542,7 @@ public class BookingTests
                 roomId: roomId);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Fact]
@@ -410,7 +596,7 @@ public class BookingTests
                 adults: adults);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Fact]
@@ -426,7 +612,7 @@ public class BookingTests
                 children: -1);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Theory]
@@ -445,7 +631,7 @@ public class BookingTests
                 pricePerNight: pricePerNight);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Theory]
@@ -464,7 +650,7 @@ public class BookingTests
                 originalTotalPrice: originalTotalPrice);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Theory]
@@ -483,7 +669,7 @@ public class BookingTests
                 discountPercentage: discountPercentage);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Fact]
@@ -499,7 +685,7 @@ public class BookingTests
                 discountAmount: -1m);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Theory]
@@ -518,7 +704,7 @@ public class BookingTests
                 totalPrice: totalPrice);
 
         // Assert
-        Assert.Throws<ArgumentException>(action);
+        Assert.ThrowsAny<ArgumentException>(action);
     }
 
     [Fact]
@@ -587,9 +773,11 @@ public class BookingTests
         int discountPercentage = 10,
         decimal discountAmount = 30m,
         decimal totalPrice = 270m,
-        string? specialRequests = "Test request")
+        string? specialRequests = "Test request",
+        DateTime? createdAt = null,
+        DateTime? pendingExpiresAt = null)
     {
-        return new Booking(
+        return BookingTestFactory.Create(
             userId,
             roomId,
             checkIn ?? new DateTime(2026, 10, 10),
@@ -601,7 +789,9 @@ public class BookingTests
             discountPercentage,
             discountAmount,
             totalPrice,
-            specialRequests);
+            specialRequests,
+            createdAt ?? DateTime.UtcNow,
+            pendingExpiresAt ?? DateTime.UtcNow.AddHours(1));
     }
 
     private static void ModifyWithValidData(
@@ -619,16 +809,19 @@ public class BookingTests
         string? specialRequests = "Updated request")
     {
         booking.Modify(
-            roomId,
-            checkIn ?? new DateTime(2026, 11, 10),
-            checkOut ?? new DateTime(2026, 11, 13),
-            adults,
-            children,
-            pricePerNight,
-            originalTotalPrice,
-            discountPercentage,
-            discountAmount,
-            totalPrice,
-            specialRequests);
+            new BookingStay(
+                roomId,
+                checkIn ?? new DateTime(2026, 11, 10),
+                checkOut ?? new DateTime(2026, 11, 13),
+                adults,
+                children),
+            new BookingPrice(
+                pricePerNight,
+                originalTotalPrice,
+                discountPercentage,
+                discountAmount,
+                totalPrice),
+            specialRequests,
+            new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc));
     }
 }

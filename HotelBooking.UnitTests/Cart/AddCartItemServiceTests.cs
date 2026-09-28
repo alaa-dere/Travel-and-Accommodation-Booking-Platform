@@ -193,6 +193,39 @@ public class AddCartItemServiceTests
     }
 
     [Fact]
+    public async Task AddCartItemAsync_WhenCartContainsRoomFromSameHotel_ShouldAddCartItem()
+    {
+        const int userId = 1;
+        var request = CreateValidRequest();
+        SetupAvailableRoom(request, hotelId: 20);
+        _cartRepositoryMock
+            .Setup(repository => repository.GetCartHotelIdAsync(userId))
+            .ReturnsAsync(20);
+
+        await _service.AddCartItemAsync(userId, request);
+
+        _cartRepositoryMock.Verify(repository => repository.AddAsync(It.IsAny<CartItem>()), Times.Once);
+        _cartRepositoryMock.Verify(repository => repository.SaveChangesAsync(), Times.Once);
+    }
+
+    [Fact]
+    public async Task AddCartItemAsync_WhenCartContainsRoomFromDifferentHotel_ShouldThrowConflictException()
+    {
+        const int userId = 1;
+        var request = CreateValidRequest();
+        SetupAvailableRoom(request, hotelId: 20);
+        _cartRepositoryMock
+            .Setup(repository => repository.GetCartHotelIdAsync(userId))
+            .ReturnsAsync(30);
+
+        var action = async () => await _service.AddCartItemAsync(userId, request);
+
+        var exception = await Assert.ThrowsAsync<ConflictException>(action);
+        Assert.Contains("one hotel", exception.Message);
+        VerifyCartWasNeverModified();
+    }
+
+    [Fact]
     public async Task AddCartItemAsync_WhenRoomIsAvailable_ShouldSaveChanges()
     {
         // Arrange
@@ -231,11 +264,12 @@ public class AddCartItemServiceTests
             Times.Once);
     }
 
-    private void SetupAvailableRoom(AddCartItemRequestDto request)
+    private void SetupAvailableRoom(AddCartItemRequestDto request, int hotelId = 20)
     {
         var availableRoom = new AvailableRoomResponseDto
         {
             RoomId = request.RoomId,
+            HotelId = hotelId,
             PricePerNight = 100m
         };
 

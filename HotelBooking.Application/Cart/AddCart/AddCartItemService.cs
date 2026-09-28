@@ -44,6 +44,12 @@ public class AddCartItemService : IAddCartItemService
             throw new ConflictException("The room is not available for the selected dates and guest requirements.");
         }
 
+        var cartHotelId = await _cartRepository.GetCartHotelIdAsync(userId);
+        if (cartHotelId.HasValue && cartHotelId.Value != availableRoom.HotelId)
+        {
+            throw new ConflictException("The cart can only contain rooms from one hotel. Complete or clear the current cart before adding a room from another hotel.");
+        }
+
         var cartItem = new CartItem(userId, request.RoomId, request.CheckIn, request.CheckOut, request.Adults, request.Children);
         await _cartRepository.AddAsync(cartItem);
         await _cartRepository.SaveChangesAsync();

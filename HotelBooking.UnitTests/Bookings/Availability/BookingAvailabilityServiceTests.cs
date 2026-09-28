@@ -9,11 +9,14 @@ public class BookingAvailabilityServiceTests
 {
     private readonly Mock<IBookingRepository> _bookingRepositoryMock;
     private readonly BookingAvailabilityService _service;
+    private readonly DateTime _utcNow = new(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc);
 
     public BookingAvailabilityServiceTests()
     {
         _bookingRepositoryMock = new Mock<IBookingRepository>();
-        _service = new BookingAvailabilityService(_bookingRepositoryMock.Object);
+        _service = new BookingAvailabilityService(
+            _bookingRepositoryMock.Object,
+            new FixedTimeProvider(_utcNow));
     }
 
     [Fact]
@@ -32,6 +35,7 @@ public class BookingAvailabilityServiceTests
         _bookingRepositoryMock.Verify(
             repository => repository.HasConflictingBookingAsync(
                 It.IsAny<int>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<int?>()),
@@ -56,6 +60,7 @@ public class BookingAvailabilityServiceTests
                 It.IsAny<int>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<int?>()),
             Times.Never);
     }
@@ -78,6 +83,7 @@ public class BookingAvailabilityServiceTests
                 It.IsAny<int>(),
                 It.IsAny<DateTime>(),
                 It.IsAny<DateTime>(),
+                It.IsAny<DateTime>(),
                 It.IsAny<int?>()),
             Times.Never);
     }
@@ -91,7 +97,7 @@ public class BookingAvailabilityServiceTests
         var checkIn = DateTime.UtcNow.AddDays(2);
         var checkOut = checkIn.AddDays(2);
 
-        _bookingRepositoryMock.Setup(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, null)).ReturnsAsync(true);
+        _bookingRepositoryMock.Setup(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, _utcNow, null)).ReturnsAsync(true);
 
         // Act
         var result = await _service.IsRoomAvailableAsync(roomId, checkIn, checkOut);
@@ -99,7 +105,7 @@ public class BookingAvailabilityServiceTests
         // Assert
         Assert.False(result);
 
-        _bookingRepositoryMock.Verify(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, null), Times.Once);
+        _bookingRepositoryMock.Verify(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, _utcNow, null), Times.Once);
     }
 
     [Fact]
@@ -111,7 +117,7 @@ public class BookingAvailabilityServiceTests
         var checkIn = DateTime.UtcNow.AddDays(2);
         var checkOut = checkIn.AddDays(2);
 
-        _bookingRepositoryMock.Setup(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, null)).ReturnsAsync(false);
+        _bookingRepositoryMock.Setup(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, _utcNow, null)).ReturnsAsync(false);
 
         // Act
         var result = await _service.IsRoomAvailableAsync(roomId, checkIn, checkOut);
@@ -119,7 +125,7 @@ public class BookingAvailabilityServiceTests
         // Assert
         Assert.True(result);
 
-        _bookingRepositoryMock.Verify(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, null), Times.Once);
+        _bookingRepositoryMock.Verify(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, _utcNow, null), Times.Once);
     }
 
     [Fact]
@@ -132,7 +138,7 @@ public class BookingAvailabilityServiceTests
         var checkIn = DateTime.UtcNow.AddDays(2);
         var checkOut = checkIn.AddDays(2);
 
-        _bookingRepositoryMock.Setup(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, excludedBookingId)).ReturnsAsync(false);
+        _bookingRepositoryMock.Setup(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, _utcNow, excludedBookingId)).ReturnsAsync(false);
 
         // Act
         var result = await _service.IsRoomAvailableAsync(roomId, checkIn, checkOut, excludedBookingId);
@@ -140,6 +146,11 @@ public class BookingAvailabilityServiceTests
         // Assert
         Assert.True(result);
 
-        _bookingRepositoryMock.Verify(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, excludedBookingId), Times.Once);
+        _bookingRepositoryMock.Verify(repository => repository.HasConflictingBookingAsync(roomId, checkIn, checkOut, _utcNow, excludedBookingId), Times.Once);
+    }
+
+    private sealed class FixedTimeProvider(DateTime utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(utcNow);
     }
 }

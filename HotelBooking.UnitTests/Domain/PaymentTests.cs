@@ -5,158 +5,157 @@ namespace HotelBooking.UnitTests.Domain.Entities;
 
 public class PaymentTests
 {
+    private static readonly DateTime CreatedAt =
+        new(2030, 1, 1, 10, 0, 0, DateTimeKind.Utc);
+    private static readonly DateTime ProcessedAt = CreatedAt.AddMinutes(1);
+
     [Fact]
-    public void Constructor_WhenAmountIsValid_ShouldCreatePaymentWithCorrectValues()
+    public void Constructor_WhenAmountIsValid_ShouldCreatePendingPaymentAtProvidedTime()
     {
-        // Arrange
-        var beforeCreation = DateTime.UtcNow;
+        var payment = new Payment(500m, CreatedAt);
 
-        // Act
-        var payment = new Payment(500m);
-
-        var afterCreation = DateTime.UtcNow;
-
-        // Assert
         Assert.Equal(500m, payment.Amount);
         Assert.Equal(PaymentStatus.Pending, payment.Status);
+        Assert.Equal(CreatedAt, payment.CreatedAt);
         Assert.Null(payment.ProcessedAt);
-
-        Assert.InRange(
-            payment.CreatedAt,
-            beforeCreation,
-            afterCreation);
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(-1)]
-    public void Constructor_WhenAmountIsInvalid_ShouldThrowArgumentOutOfRangeException(
-        int amount)
+    public void Constructor_WhenAmountIsInvalid_ShouldThrow(int amount)
     {
-        // Act
-        var action = () =>
-            new Payment(amount);
+        var action = () => new Payment(amount, CreatedAt);
 
-        // Assert
-        var exception =
-            Assert.Throws<ArgumentOutOfRangeException>(action);
-
+        var exception = Assert.Throws<ArgumentOutOfRangeException>(action);
         Assert.Equal("amount", exception.ParamName);
     }
 
     [Fact]
-    public void Constructor_WhenAmountIsSmallPositiveValue_ShouldSucceed()
+    public void Constructor_WhenCreatedAtIsNotUtc_ShouldThrow()
     {
-        // Act
-        var payment = new Payment(0.01m);
+        var action = () => new Payment(500m, DateTime.SpecifyKind(CreatedAt, DateTimeKind.Local));
 
-        // Assert
-        Assert.Equal(0.01m, payment.Amount);
-        Assert.Equal(PaymentStatus.Pending, payment.Status);
+        var exception = Assert.Throws<ArgumentException>(action);
+        Assert.Equal("createdAt", exception.ParamName);
     }
 
     [Fact]
-    public void MarkAsPaid_ShouldChangeStatusToPaid()
+    public void MarkAsPaid_ShouldSetStatusAndProvidedProcessingTime()
     {
-        // Arrange
         var payment = CreateValidPayment();
 
-        // Act
-        payment.MarkAsPaid();
+        payment.MarkAsPaid(ProcessedAt);
 
-        // Assert
-        Assert.Equal(
-            PaymentStatus.Paid,
-            payment.Status);
-    }
-
-    [Fact]
-    public void MarkAsPaid_ShouldSetProcessedAt()
-    {
-        // Arrange
-        var payment = CreateValidPayment();
-
-        var beforeProcessing = DateTime.UtcNow;
-
-        // Act
-        payment.MarkAsPaid();
-
-        var afterProcessing = DateTime.UtcNow;
-
-        // Assert
-        Assert.NotNull(payment.ProcessedAt);
-
-        Assert.InRange(
-            payment.ProcessedAt!.Value,
-            beforeProcessing,
-            afterProcessing);
-    }
-
-    [Fact]
-    public void MarkAsPaid_ShouldNotChangeAmount()
-    {
-        // Arrange
-        var payment = CreateValidPayment();
-
-        // Act
-        payment.MarkAsPaid();
-
-        // Assert
+        Assert.Equal(PaymentStatus.Paid, payment.Status);
+        Assert.Equal(ProcessedAt, payment.ProcessedAt);
         Assert.Equal(500m, payment.Amount);
     }
 
     [Fact]
-    public void MarkAsFailed_ShouldChangeStatusToFailed()
+    public void MarkAsFailed_ShouldSetFailureInformationAndProvidedProcessingTime()
     {
-        // Arrange
         var payment = CreateValidPayment();
 
-        // Act
-        payment.MarkAsFailed();
+        payment.MarkAsFailed("card_declined", ProcessedAt);
 
-        // Assert
-        Assert.Equal(
-            PaymentStatus.Failed,
-            payment.Status);
-    }
-
-    [Fact]
-    public void MarkAsFailed_ShouldSetProcessedAt()
-    {
-        // Arrange
-        var payment = CreateValidPayment();
-
-        var beforeProcessing = DateTime.UtcNow;
-
-        // Act
-        payment.MarkAsFailed();
-
-        var afterProcessing = DateTime.UtcNow;
-
-        // Assert
-        Assert.NotNull(payment.ProcessedAt);
-
-        Assert.InRange(
-            payment.ProcessedAt!.Value,
-            beforeProcessing,
-            afterProcessing);
-    }
-
-    [Fact]
-    public void MarkAsFailed_ShouldNotChangeAmount()
-    {
-        // Arrange
-        var payment = CreateValidPayment();
-
-        // Act
-        payment.MarkAsFailed();
-
-        // Assert
+        Assert.Equal(PaymentStatus.Failed, payment.Status);
+        Assert.Equal("card_declined", payment.FailureCode);
+        Assert.Equal(ProcessedAt, payment.ProcessedAt);
         Assert.Equal(500m, payment.Amount);
     }
 
-    private static Payment CreateValidPayment()
+    [Fact]
+    public void MarkAsCancelled_ShouldSetProvidedProcessingTime()
     {
-        return new Payment(500m);
+        var payment = CreateValidPayment();
+
+        payment.MarkAsCancelled(ProcessedAt);
+
+        Assert.Equal(PaymentStatus.Cancelled, payment.Status);
+        Assert.Equal(ProcessedAt, payment.ProcessedAt);
     }
+
+    [Theory]
+    [InlineData("paid")]
+    [InlineData("failed")]
+    [InlineData("cancelled")]
+    public void Processing_WhenTimeIsNotUtc_ShouldThrow(string operation)
+    {
+        var payment = CreateValidPayment();
+        var localTime = DateTime.SpecifyKind(ProcessedAt, DateTimeKind.Local);
+
+        Action action = operation switch
+        {
+            "paid" => () => payment.MarkAsPaid(localTime),
+            "failed" => () => payment.MarkAsFailed(null, localTime),
+            _ => () => payment.MarkAsCancelled(localTime)
+        };
+
+        Assert.Throws<ArgumentException>(action);
+    }
+
+    [Fact]
+    public void FailedEvent_AfterPaymentWasPaid_ShouldNotDowngradeStatus()
+    {
+        var payment = CreateValidPayment();
+        payment.MarkAsPaid(ProcessedAt);
+
+        payment.MarkAsFailed("late_failure", ProcessedAt.AddMinutes(1));
+
+        Assert.Equal(PaymentStatus.Paid, payment.Status);
+        Assert.Equal(ProcessedAt, payment.ProcessedAt);
+    }
+
+    [Fact]
+    public void CancelledEvent_AfterPaymentWasPaid_ShouldNotDowngradeStatus()
+    {
+        var payment = CreateValidPayment();
+        payment.MarkAsPaid(ProcessedAt);
+
+        payment.MarkAsCancelled(ProcessedAt.AddMinutes(1));
+
+        Assert.Equal(PaymentStatus.Paid, payment.Status);
+        Assert.Equal(ProcessedAt, payment.ProcessedAt);
+    }
+
+    [Fact]
+    public void PaidEvent_AfterLocalCancellation_ShouldRecordProviderSuccess()
+    {
+        var payment = CreateValidPayment();
+        payment.MarkAsCancelled(ProcessedAt);
+        var providerSucceededAt = ProcessedAt.AddMinutes(1);
+
+        payment.MarkAsPaid(providerSucceededAt);
+
+        Assert.Equal(PaymentStatus.Paid, payment.Status);
+        Assert.Equal(providerSucceededAt, payment.ProcessedAt);
+    }
+
+    [Fact]
+    public void AttachProviderPayment_WhenAlreadyLinkedToDifferentPayment_ShouldThrow()
+    {
+        var payment = CreateValidPayment();
+        payment.AttachProviderPayment("pi_first", "usd", null);
+
+        var action = () => payment.AttachProviderPayment("pi_second", "usd", null);
+
+        Assert.Throws<InvalidOperationException>(action);
+    }
+
+    [Fact]
+    public void RecordRefund_WhenPaymentWasNeverPaid_ShouldThrow()
+    {
+        var payment = CreateValidPayment();
+
+        var action = () => payment.RecordRefund(
+            "re_test",
+            RefundStatus.Pending,
+            null,
+            ProcessedAt);
+
+        Assert.Throws<InvalidOperationException>(action);
+    }
+
+    private static Payment CreateValidPayment() => new(500m, CreatedAt);
 }

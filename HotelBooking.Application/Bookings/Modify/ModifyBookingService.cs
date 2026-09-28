@@ -2,6 +2,7 @@ using HotelBooking.Application.Bookings.Dtos;
 using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
+using HotelBooking.Domain.ValueObjects;
 
 namespace HotelBooking.Application.Bookings.Modify;
 
@@ -12,19 +13,22 @@ public class ModifyBookingService : IModifyBookingService
     private readonly IBookingPricingService _pricingService;
     private readonly IBookingTransactionManager _transactionManager;
     private readonly IRoomRepository _roomRepository;
+    private readonly TimeProvider _timeProvider;
 
     public ModifyBookingService(
         IBookingRepository bookingRepository,
         IBookingAvailabilityService availabilityService,
         IBookingPricingService pricingService,
         IBookingTransactionManager transactionManager,
-        IRoomRepository roomRepository)
+        IRoomRepository roomRepository,
+        TimeProvider timeProvider)
     {
         _bookingRepository = bookingRepository;
         _availabilityService = availabilityService;
         _pricingService = pricingService;
         _transactionManager = transactionManager;
         _roomRepository = roomRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task ModifyAsync(int bookingId, int userId, ModifyBookingRequestDto request)
@@ -41,6 +45,7 @@ public class ModifyBookingService : IModifyBookingService
 
         await _transactionManager.ExecuteSerializableAsync(async () =>
         {
+            var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
             var booking = await _bookingRepository.GetByIdForUserAsync(bookingId, userId);
 
             if (booking == null)
@@ -48,7 +53,7 @@ public class ModifyBookingService : IModifyBookingService
                 throw new NotFoundException("Booking not found.");
             }
 
-            if (DateTime.UtcNow >= booking.CheckIn)
+            if (utcNow >= booking.CheckIn)
             {
                 throw new ConflictException("Booking cannot be modified after the stay has started.");
             }
@@ -131,35 +136,41 @@ public class ModifyBookingService : IModifyBookingService
                     throw new ConflictException("The selected room is not available for the requested dates.");
                 }
 
-                var price = await _pricingService.CalculatePriceAsync( request.RoomId, request.CheckIn, request.CheckOut, DateTime.UtcNow);
+                var price = await _pricingService.CalculatePriceAsync(request.RoomId, request.CheckIn, request.CheckOut, utcNow);
 
                 booking.Modify(
-                    request.RoomId,
-                    request.CheckIn,
-                    request.CheckOut,
-                    request.Adults,
-                    request.Children,
-                    price.PricePerNight,
-                    price.OriginalTotalPrice,
-                    price.DiscountPercentage,
-                    price.DiscountAmount,
-                    price.TotalPrice,
-                    request.SpecialRequests);
+                    new BookingStay(
+                        request.RoomId,
+                        request.CheckIn,
+                        request.CheckOut,
+                        request.Adults,
+                        request.Children),
+                    new BookingPrice(
+                        price.PricePerNight,
+                        price.OriginalTotalPrice,
+                        price.DiscountPercentage,
+                        price.DiscountAmount,
+                        price.TotalPrice),
+                    request.SpecialRequests,
+                    utcNow);
             }
             else
             {
                 booking.Modify(
-                    request.RoomId,
-                    request.CheckIn,
-                    request.CheckOut,
-                    request.Adults,
-                    request.Children,
-                    booking.PricePerNight,
-                    booking.OriginalTotalPrice,
-                    booking.DiscountPercentage,
-                    booking.DiscountAmount,
-                    booking.TotalPrice,
-                    request.SpecialRequests);
+                    new BookingStay(
+                        request.RoomId,
+                        request.CheckIn,
+                        request.CheckOut,
+                        request.Adults,
+                        request.Children),
+                    new BookingPrice(
+                        booking.PricePerNight,
+                        booking.OriginalTotalPrice,
+                        booking.DiscountPercentage,
+                        booking.DiscountAmount,
+                        booking.TotalPrice),
+                    request.SpecialRequests,
+                    utcNow);
             }
 
             var updatedInvoiceTotal = booking.Invoice.Bookings.Sum(invoiceBooking => invoiceBooking.TotalPrice);

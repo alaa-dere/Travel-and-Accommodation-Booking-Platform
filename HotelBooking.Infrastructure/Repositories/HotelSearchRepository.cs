@@ -11,15 +11,18 @@ namespace HotelBooking.Infrastructure.Repositories;
 public class HotelSearchRepository : IHotelSearchRepository
 {
     private readonly HotelBookingDbContext _dbContext;
+    private readonly TimeProvider _timeProvider;
 
-    public HotelSearchRepository(HotelBookingDbContext dbContext)
+    public HotelSearchRepository(HotelBookingDbContext dbContext, TimeProvider timeProvider)
     {
         _dbContext = dbContext;
+        _timeProvider = timeProvider;
     }
 
    public async Task<PagedResult<HotelSearchResult>> GetCandidateHotelsAsync(HotelSearchRequestDto request)
 {
     var searchTerm = $"%{request.Destination.Trim()}%";
+    var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
     IQueryable<Hotel> query = _dbContext.Hotels.AsNoTracking()
         .Where(hotel => hotel.IsActive)
@@ -36,6 +39,7 @@ public class HotelSearchRepository : IHotelSearchRepository
             (!request.RoomType.HasValue || room.RoomType == request.RoomType.Value) &&
             !room.Bookings.Any(booking =>
                 booking.BookingStatus != BookingStatus.Cancelled &&
+                (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
                 booking.CheckIn < request.CheckOut &&
                 booking.CheckOut > request.CheckIn)
 
@@ -51,6 +55,7 @@ public class HotelSearchRepository : IHotelSearchRepository
             (!request.RoomType.HasValue || room.RoomType == request.RoomType.Value) &&
             !room.Bookings.Any(booking =>
                 booking.BookingStatus != BookingStatus.Cancelled &&
+                (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
                 booking.CheckIn < request.CheckOut &&
                 booking.CheckOut > request.CheckIn)
         ));

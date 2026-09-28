@@ -8,6 +8,8 @@ namespace HotelBooking.UnitTests.Invoices;
 
 public class GetInvoiceForPdfServiceTests
 {
+    private static readonly DateTime UtcNow =
+        new(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IInvoiceRepository> _invoiceRepositoryMock;
     private readonly GetInvoiceForPdfService _service;
 
@@ -428,8 +430,8 @@ public class GetInvoiceForPdfServiceTests
             Hotel = hotel
         };
 
-        var payment = new Payment(300m);
-        payment.MarkAsPaid();
+        var payment = new Payment(300m, UtcNow);
+        payment.MarkAsPaid(UtcNow);
 
         invoice.Payment = payment;
 
@@ -463,7 +465,7 @@ public class GetInvoiceForPdfServiceTests
             RoomId = roomId
         };
 
-        return new Booking(
+        var booking = BookingTestFactory.Create(
             userId: userId,
             roomId: roomId,
             checkIn: new DateTime(2026, 10, 10),
@@ -475,11 +477,12 @@ public class GetInvoiceForPdfServiceTests
             discountPercentage: 0,
             discountAmount: 0m,
             totalPrice: 300m,
-            specialRequests: null)
-        {
-            BookingId = bookingId,
-            InvoiceId = invoiceId,
-            Room = room
-        };
+            specialRequests: null,
+            createdAt: DateTime.UtcNow,
+            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
+        booking.BookingId = bookingId;
+        booking.InvoiceId = invoiceId;
+        booking.Room = room;
+        return booking;
     }
 }

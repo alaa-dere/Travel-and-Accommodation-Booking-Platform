@@ -1,181 +1,197 @@
+using HotelBooking.Domain.ValueObjects;
+
 namespace HotelBooking.Domain.Entities;
 
 public class Booking
 {
-    public int BookingId { get; set; }
-    public int UserId { get; set; }
-    public int RoomId { get; set; }
-    public int InvoiceId { get; set; }
-    public DateTime CheckIn { get; set; }
-    public DateTime CheckOut { get; set; }
-    public int Adults { get; set; }
-    public int Children { get; set; }
-    public decimal PricePerNight  { get; set; }
-    public decimal OriginalTotalPrice { get; set; }
-    public int DiscountPercentage { get; set; }
-    public decimal DiscountAmount { get; set; }
-    public decimal TotalPrice { get; set; }
-    public BookingStatus BookingStatus  { get; set; }
-    public DateTime CreatedAt { get; set; }
-    public DateTime? UpdatedAt { get; set; }
-    public string? SpecialRequests { get; set; }
-    public User? User { get; set; }
-    public Room? Room { get; set; }
-    public Review? Review { get; set; }
-    public Invoice? Invoice { get; set; }
+    private Booking()
+    {
+    }
 
-    public Booking(int userId, int roomId, DateTime checkIn, DateTime checkOut, int adults, int children, decimal pricePerNight, decimal originalTotalPrice, int discountPercentage, decimal discountAmount, decimal totalPrice, string? specialRequests)
+    public int BookingId { get; internal set; }
+    public int UserId { get; private set; }
+    public int RoomId { get; private set; }
+    public int InvoiceId { get; internal set; }
+    public DateTime CheckIn { get; private set; }
+    public DateTime CheckOut { get; private set; }
+    public int Adults { get; private set; }
+    public int Children { get; private set; }
+    public decimal PricePerNight  { get; private set; }
+    public decimal OriginalTotalPrice { get; private set; }
+    public int DiscountPercentage { get; private set; }
+    public decimal DiscountAmount { get; private set; }
+    public decimal TotalPrice { get; private set; }
+    public BookingStatus BookingStatus  { get; private set; }
+    public DateTime CreatedAt { get; private set; }
+    public DateTime PendingExpiresAt { get; private set; }
+    public DateTime? UpdatedAt { get; private set; }
+    public string? SpecialRequests { get; private set; }
+    public User? User { get; internal set; }
+    public Room? Room { get; internal set; }
+    public Review? Review { get; internal set; }
+    public Invoice? Invoice { get; internal set; }
+
+    public Booking(int userId, BookingStay stay, BookingPrice price, PendingBookingWindow pendingWindow, string? specialRequests)
     {
         if (userId <= 0)
         {
             throw new ArgumentOutOfRangeException(nameof(userId), "User ID must be greater than zero.");
-        }
-        
-        if (roomId <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(roomId), "Room ID must be greater than zero.");
-        }
-        
-        if (checkOut <= checkIn)
-        {
-            throw new ArgumentException("Check-out date must be after the check-in date.", nameof(checkOut));
-        }
-        
-        if (adults < 1)
-        {
-            throw new ArgumentOutOfRangeException(nameof(adults), "Number of adults must be at least 1.");
-        }
-        
-        if (children < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(children), "Number of children cannot be negative.");
-        }
-        
-        if (pricePerNight <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(pricePerNight), "Price per night must be greater than zero.");
-        }
-        
-        if (originalTotalPrice <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(originalTotalPrice), "Original total price must be greater than zero.");
-        }
-        
-        if (discountPercentage < 0 || discountPercentage >= 100)
-        {
-            throw new ArgumentOutOfRangeException(nameof(discountPercentage), "Discount percentage must be between 0 and 100.");
-        }
-        
-        if (discountAmount < 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(discountAmount), "Discount amount cannot be negative.");
-        }
-        
-        if (totalPrice <= 0)
-        {
-            throw new ArgumentOutOfRangeException(nameof(totalPrice), "Total price must be greater than zero.");
-        }
-        
-        if (specialRequests?.Length > 1000)
-        {
-            throw new ArgumentException("Special requests cannot exceed 1000 characters.", nameof(specialRequests));
-        }
-        
+        }    
+        ValidateSpecialRequests(specialRequests);
+
         UserId = userId;
-        RoomId = roomId;
-        CheckIn = checkIn;
-        CheckOut = checkOut;
-        Adults = adults;
-        Children = children;
-        PricePerNight = pricePerNight;
-        OriginalTotalPrice = originalTotalPrice;
-        DiscountPercentage = discountPercentage;
-        DiscountAmount = discountAmount;
-        TotalPrice = totalPrice;
+        ApplyStay(stay);
+        ApplyPrice(price);
         BookingStatus = BookingStatus.Pending;
-        CreatedAt = DateTime.UtcNow;
+        CreatedAt = pendingWindow.CreatedAt;
+        PendingExpiresAt = pendingWindow.ExpiresAt;
         SpecialRequests = specialRequests;
     }
+
     
-    public void Cancel()
+    public void Cancel(DateTime utcNow)
     {
+        ValidateUtc(utcNow, nameof(utcNow));
+        if (BookingStatus is not (BookingStatus.Pending or BookingStatus.Confirmed))
+        {
+            throw new InvalidOperationException("Only a pending or confirmed booking can be cancelled.");
+        }
         BookingStatus = BookingStatus.Cancelled;
-        UpdatedAt = DateTime.UtcNow;
+        UpdatedAt = utcNow;
     }
-    
-    public void Modify(
-        int roomId,
-        DateTime checkIn,
-        DateTime checkOut,
-        int adults,
-        int children,
-        decimal pricePerNight,
-        decimal originalTotalPrice,
-        int discountPercentage,
-        decimal discountAmount,
-        decimal totalPrice,
-        string? specialRequests)
+
+    public void CancelByCustomer(DateTime utcNow)
     {
-        if (roomId <= 0)
+        ValidateUtc(utcNow, nameof(utcNow));
+        if (utcNow >= CheckIn)
         {
-            throw new ArgumentException("Room ID must be greater than zero.", nameof(roomId));
+            throw new InvalidOperationException("A booking cannot be cancelled after the stay has started.");
+        }
+        Cancel(utcNow);
+    }
+
+    public void Confirm(DateTime utcNow)
+    {
+        ValidateUtc(utcNow, nameof(utcNow));
+        if (BookingStatus != BookingStatus.Pending)
+        {
+            throw new InvalidOperationException("Only a pending booking can be confirmed.");
+        }
+        BookingStatus = BookingStatus.Confirmed;
+        UpdatedAt = utcNow;
+    }
+
+    public void Expire(DateTime utcNow)
+    {
+        if (utcNow.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("Expiration check time must be in UTC.", nameof(utcNow));
+        }
+
+        if (BookingStatus != BookingStatus.Pending)
+        {
+            throw new InvalidOperationException("Only a pending booking can expire.");
+        }
+
+        if (PendingExpiresAt > utcNow)
+        {
+            throw new InvalidOperationException("A pending booking cannot expire before its payment deadline.");
+        }
+
+        BookingStatus = BookingStatus.Cancelled;
+        UpdatedAt = utcNow;
+    }
+
+    public void Complete(DateTime utcNow)
+    {
+        if (utcNow.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("Completion time must be in UTC.", nameof(utcNow));
+        }
+
+        if (BookingStatus != BookingStatus.Confirmed)
+        {
+            throw new InvalidOperationException("Only a confirmed booking can be completed.");
+        }
+
+        if (utcNow < CheckOut)
+        {
+            throw new InvalidOperationException("A booking cannot be completed before check-out.");
+        }
+
+        BookingStatus = BookingStatus.Completed;
+        UpdatedAt = utcNow;
+    }
+
+    public void Modify(BookingStay stay, BookingPrice price, string? specialRequests, DateTime utcNow)
+    {
+        ValidateUtc(utcNow, nameof(utcNow));
+        if (BookingStatus is not (BookingStatus.Pending or BookingStatus.Confirmed))
+        {
+            throw new InvalidOperationException("Only a pending or confirmed booking can be modified.");
+        }     
+        if (utcNow >= CheckIn)
+        {
+            throw new InvalidOperationException("A booking cannot be modified after the stay has started.");
+        }
+        ValidateSpecialRequests(specialRequests);
+        ApplyStay(stay);
+        ApplyPrice(price);
+        SpecialRequests = specialRequests;
+        UpdatedAt = utcNow;
+    }
+
+    public void AssignToInvoice(Invoice invoice)
+    {
+        ArgumentNullException.ThrowIfNull(invoice);
+
+        if (invoice.UserId != UserId)
+        {
+            throw new InvalidOperationException("A booking and its invoice must belong to the same user.");
+        }
+        if (Invoice is not null && !ReferenceEquals(Invoice, invoice))
+        {
+            throw new InvalidOperationException("The booking is already assigned to another invoice.");
+        }
+        Invoice = invoice;
+        if (!invoice.Bookings.Contains(this))
+        {
+            invoice.Bookings.Add(this);
         }
         
-        if (checkOut <= checkIn)
-        {
-            throw new ArgumentException("Check-out must be after check-in.");
-        }
-        
-        if (adults < 1)
-        {
-            throw new ArgumentException("At least one adult is required.", nameof(adults));
-        }
-        
-        if (children < 0)
-        {
-            throw new ArgumentException("Children count cannot be negative.", nameof(children));
-        }
-        
-        if (pricePerNight <= 0)
-        {
-            throw new ArgumentException("Price per night must be greater than zero.", nameof(pricePerNight));
-        }
-        
-        if (originalTotalPrice <= 0)
-        {
-            throw new ArgumentException("Original total price must be greater than zero.", nameof(originalTotalPrice));
-        }
-        
-        if (discountPercentage < 0 || discountPercentage >= 100)
-        {
-            throw new ArgumentException("Invalid discount percentage.", nameof(discountPercentage));
-        }
-        
-        if (discountAmount < 0)
-        {
-            throw new ArgumentException("Discount amount cannot be negative.", nameof(discountAmount));
-        }
-        
-        if (totalPrice <= 0)
-        {
-            throw new ArgumentException("Total price must be greater than zero.", nameof(totalPrice));
-        }
-        
+    }
+
+    private static void ValidateSpecialRequests(string? specialRequests)
+    {
         if (specialRequests?.Length > 1000)
         {
             throw new ArgumentException("Special requests cannot exceed 1000 characters.", nameof(specialRequests));
         }
-        RoomId = roomId;
-        CheckIn = checkIn;
-        CheckOut = checkOut;
-        Adults = adults;
-        Children = children;
-        PricePerNight = pricePerNight;
-        OriginalTotalPrice = originalTotalPrice;
-        DiscountPercentage = discountPercentage;
-        DiscountAmount = discountAmount;
-        TotalPrice = totalPrice;
-        SpecialRequests = specialRequests;
-        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static void ValidateUtc(DateTime value, string parameterName)
+    {
+        if (value.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("The supplied time must be in UTC.", parameterName);
+        }
+    }
+
+    private void ApplyStay(BookingStay stay)
+    {
+        RoomId = stay.RoomId;
+        CheckIn = stay.CheckIn;
+        CheckOut = stay.CheckOut;
+        Adults = stay.Adults;
+        Children = stay.Children;
+    }
+
+    private void ApplyPrice(BookingPrice price)
+    {
+        PricePerNight = price.PricePerNight;
+        OriginalTotalPrice = price.OriginalTotal;
+        DiscountPercentage = price.DiscountPercentage;
+        DiscountAmount = price.DiscountAmount;
+        TotalPrice = price.Total;
     }
 }

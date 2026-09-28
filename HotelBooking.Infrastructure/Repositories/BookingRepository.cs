@@ -14,10 +14,11 @@ public class BookingRepository : IBookingRepository
         _dbContext = dbContext;
     }
 
-    public async Task<bool> HasConflictingBookingAsync(int roomId, DateTime checkIn, DateTime checkOut, int? excludedBookingId = null)
+    public async Task<bool> HasConflictingBookingAsync(int roomId, DateTime checkIn, DateTime checkOut, DateTime utcNow, int? excludedBookingId = null)
     {
         return await _dbContext.Bookings.AsNoTracking()
             .AnyAsync(booking => booking.RoomId == roomId && booking.BookingStatus != BookingStatus.Cancelled &&
+                                 (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
                                  booking.CheckIn < checkOut && booking.CheckOut > checkIn &&
                                  (!excludedBookingId.HasValue || booking.BookingId != excludedBookingId.Value));
     }
@@ -25,6 +26,17 @@ public class BookingRepository : IBookingRepository
     public async Task AddAsync(Booking booking)
     {
         await _dbContext.Bookings.AddAsync(booking);
+    }
+
+    public Task<List<Booking>> GetExpiredPendingBookingsAsync(DateTime utcNow, int batchSize)
+    {
+        return _dbContext.Bookings
+            .Include(booking => booking.Invoice)
+                .ThenInclude(invoice => invoice!.Payment)
+            .Where(booking => booking.BookingStatus == BookingStatus.Pending && booking.PendingExpiresAt <= utcNow)
+            .OrderBy(booking => booking.PendingExpiresAt)
+            .Take(batchSize)
+            .ToListAsync();
     }
 
     public async Task SaveChangesAsync()

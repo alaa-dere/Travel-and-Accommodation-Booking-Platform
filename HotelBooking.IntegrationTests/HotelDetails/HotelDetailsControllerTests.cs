@@ -242,13 +242,11 @@ public class HotelDetailsControllerTests : IClassFixture<CustomWebApplicationFac
         var invoice = new Invoice(user.UserId, hotel.HotelId, 200m);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
-        var booking = new Booking(user.UserId, room.RoomId,
+        var booking = BookingTestFactory.Create(user.UserId, room.RoomId,
             new DateTime(2030, 1, 10), new DateTime(2030, 1, 12),
-            2, 0, 100m, 200m, 0, 0m, 200m, null)
-        {
-            InvoiceId = invoice.InvoiceId,
-            BookingStatus = status
-        };
+            2, 0, 100m, 200m, 0, 0m, 200m, null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1));
+        booking.AssignToInvoice(invoice);
+        booking.TransitionTo(status);
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
         return booking;

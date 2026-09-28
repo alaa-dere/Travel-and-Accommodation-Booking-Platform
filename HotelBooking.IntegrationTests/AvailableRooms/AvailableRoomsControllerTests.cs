@@ -554,6 +554,37 @@ public class AvailableRoomsControllerTests :
         Assert.Equal(expectedAvailable, result.Any(item => item.RoomId == room.RoomId));
     }
 
+    [Theory]
+    [InlineData(-1, true)]
+    [InlineData(1, false)]
+    public async Task GetAvailableRooms_WithPendingBooking_ShouldRespectExpiration(
+        int expirationOffsetHours,
+        bool expectedAvailable)
+    {
+        var hotel = await CreateHotelAsync();
+        var room = await CreateRoomAsync(hotel.HotelId, "406", 2, 1, 100m);
+        var customer = await CreateUserAsync(Unique("customer"), UniqueEmail(), Role.Customer);
+        var pendingExpiresAt = DateTime.UtcNow.AddHours(expirationOffsetHours);
+        await CreateBookingAsync(
+            customer,
+            hotel,
+            room,
+            new DateTime(2030, 1, 10),
+            new DateTime(2030, 1, 12),
+            false,
+            pendingExpiresAt);
+        using var client = CreateAuthenticatedClient(customer);
+
+        var response = await client.GetAsync(
+            $"/api/hotels/{hotel.HotelId}/available-rooms" +
+            "?CheckIn=2030-01-10&CheckOut=2030-01-12&Adults=2&Children=0");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var result = await response.Content.ReadFromJsonAsync<List<AvailableRoomResponseDto>>(JsonOptions);
+        Assert.NotNull(result);
+        Assert.Equal(expectedAvailable, result.Any(item => item.RoomId == room.RoomId));
+    }
+
     [Fact]
     public async Task SelectRoom_WhenRoomIsAvailable_ShouldReturnSelectedRoomWithTotalPrice()
     {
@@ -1081,7 +1112,13 @@ public class AvailableRoomsControllerTests :
     }
 
     private async Task CreateBookingAsync(
-        User user, Hotel hotel, Room room, DateTime checkIn, DateTime checkOut, bool cancelled)
+        User user,
+        Hotel hotel,
+        Room room,
+        DateTime checkIn,
+        DateTime checkOut,
+        bool cancelled,
+        DateTime? pendingExpiresAt = null)
     {
         using var scope = _factory.Services.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
@@ -1091,15 +1128,15 @@ public class AvailableRoomsControllerTests :
         dbContext.Invoices.Add(invoice);
         await dbContext.SaveChangesAsync();
 
-        var booking = new Booking(
+        var expiration = pendingExpiresAt ?? DateTime.UtcNow.AddHours(1);
+        var createdAt = expiration.AddMinutes(-15);
+        var booking = BookingTestFactory.Create(
             user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
-            room.PricePerNight, total, 0, 0m, total, null)
-        {
-            InvoiceId = invoice.InvoiceId
-        };
+            room.PricePerNight, total, 0, 0m, total, null, createdAt, expiration);
+        booking.AssignToInvoice(invoice);
         if (cancelled)
         {
-            booking.Cancel();
+            booking.Cancel(booking.CreatedAt);
         }
 
         dbContext.Bookings.Add(booking);

@@ -1,4 +1,18 @@
 services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-hotelbooking}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     environment:
@@ -50,9 +64,21 @@ services:
       Stripe__SecretKey: ${STRIPE_SECRET_KEY}
       Stripe__PublishableKey: ${STRIPE_PUBLISHABLE_KEY}
       Stripe__WebhookSecret: ${STRIPE_WEBHOOK_SECRET}
+      RabbitMq__Host: rabbitmq
+      RabbitMq__Username: ${RABBITMQ_USER:-hotelbooking}
+      RabbitMq__Password: ${RABBITMQ_PASSWORD}
+      Email__Host: smtp.gmail.com
+      Email__Port: 587
+      Email__SenderEmail: ${EMAIL_SENDER_EMAIL}
+      Email__SenderName: Hotel Booking
+      Email__Username: ${EMAIL_SENDER_EMAIL}
+      Email__Password: ${EMAIL_APP_PASSWORD}
+      Email__EnableSsl: "true"
     depends_on:
       migrations:
         condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
 
 volumes:
   sqlserver-data:

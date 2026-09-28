@@ -148,7 +148,7 @@ public class CheckoutControllerTests : IClassFixture<CustomWebApplicationFactory
         Assert.Equal(invoice.InvoiceId, confirmation.ConfirmationId);
         Assert.Equal(booking.BookingId, roomConfirmation.BookingId);
         Assert.Equal("Late arrival", booking.SpecialRequests);
-        Assert.Equal(BookingStatus.Pending, booking.BookingStatus);
+        Assert.Equal(BookingStatus.Confirmed, booking.BookingStatus);
         Assert.Equal(300m, invoice.TotalAmount);
         Assert.Equal(PaymentStatus.Paid, payment.Status);
         Assert.NotNull(payment.ProcessedAt);
@@ -215,27 +215,26 @@ public class CheckoutControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
-    public async Task CompleteCheckout_WithRoomsAtDifferentHotels_ShouldCreateSeparateCheckoutGroups()
+    public async Task CompleteCheckout_WithLegacyMultiHotelCart_ShouldReturnConflictWithoutCreatingCheckoutRecords()
     {
         var user = await CreateUserAsync(Role.Customer);
-        var (firstHotel, firstRoom) = await CreateHotelAndRoomAsync(100m);
-        var (secondHotel, secondRoom) = await CreateHotelAndRoomAsync(200m);
-        await CreateCartItemAsync(user, firstRoom, new DateTime(2030, 3, 1), new DateTime(2030, 3, 2));
-        await CreateCartItemAsync(user, secondRoom, new DateTime(2030, 3, 4), new DateTime(2030, 3, 6));
+        var (_, firstRoom) = await CreateHotelAndRoomAsync(100m);
+        var (_, secondRoom) = await CreateHotelAndRoomAsync(200m);
+        var firstItem = await CreateCartItemAsync(user, firstRoom, new DateTime(2030, 3, 1), new DateTime(2030, 3, 2));
+        var secondItem = await CreateCartItemAsync(user, secondRoom, new DateTime(2030, 3, 4), new DateTime(2030, 3, 6));
         using var client = CreateAuthenticatedClient(user);
 
         var response = await client.PostAsJsonAsync("/api/checkout", ValidRequest());
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<BookingCreationResultDto>(JsonOptions);
-        Assert.NotNull(result);
-        Assert.Equal(2, result.BookingCount);
-        Assert.Equal(2, result.InvoiceCount);
-        Assert.Equal(2, result.Payments.Count);
-        Assert.Equal(2, result.Confirmations.Count);
-        Assert.Contains(result.Confirmations, item => item.HotelId == firstHotel.HotelId && item.TotalAmount == 100m);
-        Assert.Contains(result.Confirmations, item => item.HotelId == secondHotel.HotelId && item.TotalAmount == 400m);
-        Assert.Equal(2, GetEmailSender().Messages.Count);
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
+        Assert.False(await db.Bookings.AnyAsync(entry => entry.UserId == user.UserId));
+        Assert.False(await db.Invoices.AnyAsync(entry => entry.UserId == user.UserId));
+        Assert.False(await db.Payments.AnyAsync(entry => entry.Invoice!.UserId == user.UserId));
+        Assert.True(await db.CartItems.AnyAsync(entry => entry.CartItemId == firstItem.CartItemId));
+        Assert.True(await db.CartItems.AnyAsync(entry => entry.CartItemId == secondItem.CartItemId));
+        Assert.Empty(GetEmailSender().Messages);
     }
 
     [Fact]
@@ -279,17 +278,17 @@ public class CheckoutControllerTests : IClassFixture<CustomWebApplicationFactory
     }
 
     [Fact]
-    public async Task CompleteCheckout_WhenLaterHotelFails_ShouldRollBackEarlierHotelChanges()
+    public async Task CompleteCheckout_WhenLaterRoomAtSameHotelFails_ShouldRollBackEarlierChanges()
     {
         var user = await CreateUserAsync(Role.Customer);
         var otherUser = await CreateUserAsync(Role.Customer);
-        var (firstHotel, firstRoom) = await CreateHotelAndRoomAsync(100m);
-        var (secondHotel, secondRoom) = await CreateHotelAndRoomAsync(100m);
+        var (hotel, firstRoom) = await CreateHotelAndRoomAsync(100m);
+        var secondRoom = await CreateRoomAsync(hotel.HotelId, 100m);
         var firstItem = await CreateCartItemAsync(user, firstRoom,
             new DateTime(2030, 6, 1), new DateTime(2030, 6, 3));
         var secondItem = await CreateCartItemAsync(user, secondRoom,
             new DateTime(2030, 6, 5), new DateTime(2030, 6, 7));
-        await CreateBookingAsync(otherUser, secondHotel, secondRoom,
+        await CreateBookingAsync(otherUser, hotel, secondRoom,
             new DateTime(2030, 6, 5), new DateTime(2030, 6, 7));
         using var client = CreateAuthenticatedClient(user);
 
@@ -304,7 +303,6 @@ public class CheckoutControllerTests : IClassFixture<CustomWebApplicationFactory
         Assert.True(await db.CartItems.AnyAsync(entry => entry.CartItemId == firstItem.CartItemId));
         Assert.True(await db.CartItems.AnyAsync(entry => entry.CartItemId == secondItem.CartItemId));
         Assert.Empty(GetEmailSender().Messages);
-        Assert.NotEqual(firstHotel.HotelId, secondHotel.HotelId);
     }
 
     [Fact]
@@ -390,8 +388,9 @@ public class CheckoutControllerTests : IClassFixture<CustomWebApplicationFactory
         var invoice = new Invoice(user.UserId, hotel.HotelId, total);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
-        var booking = new Booking(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
-            room.PricePerNight, total, 0, 0m, total, null) { InvoiceId = invoice.InvoiceId };
+        var booking = BookingTestFactory.Create(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
+            room.PricePerNight, total, 0, 0m, total, null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1));
+        booking.AssignToInvoice(invoice);
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
     }

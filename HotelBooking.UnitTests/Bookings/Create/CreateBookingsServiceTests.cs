@@ -6,6 +6,7 @@ using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Application.Payments;
 using HotelBooking.Application.Payments.Dtos;
+using HotelBooking.Application.Common.Settings;
 using HotelBooking.Domain.Entities;
 using HotelBooking.Domain.Enums;
 using Moq;
@@ -25,6 +26,7 @@ public class CreateBookingsServiceTests
     private readonly Mock<IUserRepository> _userRepositoryMock;
 
     private readonly CreateBookingsService _service;
+    private static readonly DateTime FixedUtcNow = new(2026, 9, 27, 12, 0, 0, DateTimeKind.Utc);
 
     public CreateBookingsServiceTests()
     {
@@ -51,7 +53,9 @@ public class CreateBookingsServiceTests
             _transactionManagerMock.Object,
             _paymentServiceMock.Object,
             _emailServiceMock.Object,
-            _userRepositoryMock.Object);
+            _userRepositoryMock.Object,
+            new FixedTimeProvider(FixedUtcNow),
+            new BookingSettings { PendingExpirationMinutes = 15 });
     }
 
     [Fact]
@@ -152,7 +156,8 @@ public class CreateBookingsServiceTests
 
         _invoiceRepositoryMock.Verify(repository => repository.AddAsync(It.IsAny<Invoice>()), Times.Never);
         _bookingRepositoryMock.Verify(repository => repository.AddAsync(It.IsAny<Booking>()), Times.Never);
-        _paymentServiceMock.Verify(service => service.ProcessPaymentAsync(It.IsAny<Invoice>(), It.IsAny<PaymentInformationDto>()), Times.Never);
+        _paymentServiceMock.Verify(service => service.CreatePendingPaymentAsync(It.IsAny<Invoice>()), Times.Never);
+        _paymentServiceMock.Verify(service => service.ProcessPaymentAsync(It.IsAny<Payment>(), It.IsAny<PaymentInformationDto>()), Times.Never);
     }
 
     [Fact]
@@ -208,7 +213,9 @@ public class CreateBookingsServiceTests
                     booking.UserId == userId &&
                     booking.RoomId == cartItem.RoomId &&
                     booking.TotalPrice == 200m &&
-                    booking.SpecialRequests == "Late check-in")),
+                    booking.SpecialRequests == "Late check-in" &&
+                    booking.CreatedAt == FixedUtcNow &&
+                    booking.PendingExpiresAt == FixedUtcNow.AddMinutes(15))),
             Times.Once);
     }
 
@@ -328,9 +335,7 @@ public class CreateBookingsServiceTests
             .Callback<Booking>(booking => createdBooking = booking)
             .Returns(Task.CompletedTask);
 
-        _paymentServiceMock.Setup(service => service.ProcessPaymentAsync(It.IsAny<Invoice>(),
-                    It.IsAny<PaymentInformationDto>()))
-            .ReturnsAsync(() => CreateFailedPayment(200m));
+        SetupPayment(PaymentStatus.Failed);
 
         // Act
         var result = await _service.CreateBookingsAsync(userId, null, CreatePaymentInformation());
@@ -358,9 +363,7 @@ public class CreateBookingsServiceTests
         SetupRoomAvailability(cartItem);
         SetupPricing(cartItem);
 
-        _paymentServiceMock.Setup(service => service.ProcessPaymentAsync(It.IsAny<Invoice>(),
-                    It.IsAny<PaymentInformationDto>()))
-            .ReturnsAsync(() => CreateFailedPayment(200m));
+        SetupPayment(PaymentStatus.Failed);
 
         // Act
         await _service.CreateBookingsAsync(userId, null, CreatePaymentInformation());
@@ -389,10 +392,7 @@ public class CreateBookingsServiceTests
         SetupPricing(firstItem);
         SetupPricing(secondItem);
 
-        _paymentServiceMock.Setup(service => service.ProcessPaymentAsync(
-                    It.IsAny<Invoice>(),
-                    It.IsAny<PaymentInformationDto>()))
-            .ReturnsAsync((Invoice invoice, PaymentInformationDto _) => CreatePaidPayment(invoice.TotalAmount));
+        SetupPayment(PaymentStatus.Paid);
 
         // Act
         var result = await _service.CreateBookingsAsync(userId, null, CreatePaymentInformation());
@@ -406,7 +406,7 @@ public class CreateBookingsServiceTests
     }
 
     [Fact]
-    public async Task CreateBookingsAsync_WhenCartContainsRoomsFromDifferentHotels_ShouldCreateSeparateInvoices()
+    public async Task CreateBookingsAsync_WhenCartContainsRoomsFromDifferentHotels_ShouldThrowConflictBeforeCreatingCheckoutRecords()
     {
         // Arrange
         const int userId = 1;
@@ -419,72 +419,24 @@ public class CreateBookingsServiceTests
 
         _cartRepositoryMock.Setup(repository => repository.GetByUserIdAsync(userId)).ReturnsAsync(cartItems);
 
-        SetupRoomAvailability(firstItem);
-        SetupRoomAvailability(secondItem);
-        SetupPricing(firstItem);
-        SetupPricing(secondItem);
-
-        _paymentServiceMock.Setup(service => service.ProcessPaymentAsync(
-                    It.IsAny<Invoice>(),
-                    It.IsAny<PaymentInformationDto>()))
-            .ReturnsAsync((Invoice invoice, PaymentInformationDto _) => CreatePaidPayment(invoice.TotalAmount));
-
         // Act
-        var result = await _service.CreateBookingsAsync(userId, null, CreatePaymentInformation());
+        var action = async () =>
+            await _service.CreateBookingsAsync(userId, null, CreatePaymentInformation());
 
         // Assert
-        Assert.Equal(2, result.BookingCount);
-        Assert.Equal(2, result.InvoiceCount);
-        Assert.Equal(2, result.Payments.Count);
-        Assert.Equal(2, result.Confirmations.Count);
-
-        _invoiceRepositoryMock.Verify(repository => repository.AddAsync(It.IsAny<Invoice>()), Times.Exactly(2));
+        var exception = await Assert.ThrowsAsync<ConflictException>(action);
+        Assert.Contains("one hotel", exception.Message);
+        _availabilityServiceMock.Verify(service => service.IsRoomAvailableAsync(
+            It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<int?>()), Times.Never);
+        _pricingServiceMock.Verify(service => service.CalculatePriceAsync(
+            It.IsAny<int>(), It.IsAny<DateTime>(), It.IsAny<DateTime>(), It.IsAny<DateTime>()), Times.Never);
+        _invoiceRepositoryMock.Verify(repository => repository.AddAsync(It.IsAny<Invoice>()), Times.Never);
+        _bookingRepositoryMock.Verify(repository => repository.AddAsync(It.IsAny<Booking>()), Times.Never);
+        _paymentServiceMock.Verify(service => service.CreatePendingPaymentAsync(It.IsAny<Invoice>()), Times.Never);
         _paymentServiceMock.Verify(service => service.ProcessPaymentAsync(
-                It.IsAny<Invoice>(),
-                It.IsAny<PaymentInformationDto>()), Times.Exactly(2));
-
-        _emailServiceMock.Verify(service => service.SendAsync(It.IsAny<BookingConfirmationEmailDto>()), Times.Exactly(2));
-    }
-
-    [Fact]
-    public async Task CreateBookingsAsync_WhenAnyPaymentFails_ShouldNotDeleteCart()
-    {
-        // Arrange
-        const int userId = 1;
-
-        var firstItem = CreateCartItem(userId: userId, roomId: 10, hotelId: 100, hotelName: "First Hotel");
-        var secondItem = CreateCartItem(userId: userId, roomId: 20, hotelId: 200, hotelName: "Second Hotel");
-        var cartItems = new List<CartItem> { firstItem, secondItem };
-
-        SetupCustomerEmail(userId);
-
-        _cartRepositoryMock.Setup(repository => repository.GetByUserIdAsync(userId)).ReturnsAsync(cartItems);
-
-        SetupRoomAvailability(firstItem);
-        SetupRoomAvailability(secondItem);
-        SetupPricing(firstItem);
-        SetupPricing(secondItem);
-
-        var paymentCall = 0;
-
-        _paymentServiceMock.Setup(service => service.ProcessPaymentAsync(It.IsAny<Invoice>(),
-                    It.IsAny<PaymentInformationDto>()))
-            .ReturnsAsync((Invoice invoice, PaymentInformationDto _) =>
-            {
-                paymentCall++;
-
-                return paymentCall == 1 ? CreatePaidPayment(invoice.TotalAmount) : CreateFailedPayment(invoice.TotalAmount);
-            });
-
-        // Act
-        var result = await _service.CreateBookingsAsync(userId, null, CreatePaymentInformation());
-
-        // Assert
-        Assert.Equal(2, result.Payments.Count);
-        Assert.Contains(result.Payments, payment => payment.Status == PaymentStatus.Paid);
-        Assert.Contains(result.Payments, payment => payment.Status == PaymentStatus.Failed);
-
+            It.IsAny<Payment>(), It.IsAny<PaymentInformationDto>()), Times.Never);
         _cartRepositoryMock.Verify(repository => repository.DeleteRange(It.IsAny<IEnumerable<CartItem>>()), Times.Never);
+        _emailServiceMock.Verify(service => service.SendAsync(It.IsAny<BookingConfirmationEmailDto>()), Times.Never);
     }
 
     private void SetupCustomerEmail(int userId)
@@ -504,10 +456,34 @@ public class CreateBookingsServiceTests
             SetupPricing(item);
         }
 
-        _paymentServiceMock.Setup(service => service.ProcessPaymentAsync(It.IsAny<Invoice>(),
-                    It.IsAny<PaymentInformationDto>()))
-            .ReturnsAsync((Invoice invoice, PaymentInformationDto _) =>
-                CreatePaidPayment(invoice.TotalAmount));
+        SetupPayment(PaymentStatus.Paid);
+    }
+
+    private void SetupPayment(PaymentStatus resultStatus)
+    {
+        _paymentServiceMock
+            .Setup(service => service.CreatePendingPaymentAsync(It.IsAny<Invoice>()))
+            .ReturnsAsync((Invoice invoice) =>
+            {
+                var payment = new Payment(invoice.TotalAmount, FixedUtcNow)
+                {
+                    PaymentId = 1
+                };
+                payment.AssignToInvoice(invoice);
+                return payment;
+            });
+
+        _paymentServiceMock
+            .Setup(service => service.ProcessPaymentAsync(
+                It.IsAny<Payment>(), It.IsAny<PaymentInformationDto>()))
+            .Callback((Payment payment, PaymentInformationDto _) =>
+            {
+                if (resultStatus == PaymentStatus.Paid)
+                    payment.MarkAsPaid(FixedUtcNow);
+                else
+                    payment.MarkAsFailed(null, FixedUtcNow);
+            })
+            .Returns(Task.CompletedTask);
     }
 
     private void SetupRoomAvailability(CartItem item)
@@ -584,17 +560,22 @@ public class CreateBookingsServiceTests
 
     private static Payment CreatePaidPayment(decimal amount)
     {
-        var payment = new Payment(amount);
-        payment.MarkAsPaid();
+        var payment = new Payment(amount, FixedUtcNow);
+        payment.MarkAsPaid(FixedUtcNow);
 
         return payment;
     }
 
     private static Payment CreateFailedPayment(decimal amount)
     {
-        var payment = new Payment(amount);
-        payment.MarkAsFailed();
+        var payment = new Payment(amount, FixedUtcNow);
+        payment.MarkAsFailed(null, FixedUtcNow);
 
         return payment;
+    }
+
+    private sealed class FixedTimeProvider(DateTime utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => new(utcNow);
     }
 }

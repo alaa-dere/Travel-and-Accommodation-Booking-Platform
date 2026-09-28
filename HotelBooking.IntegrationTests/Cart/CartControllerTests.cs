@@ -166,6 +166,44 @@ public class CartControllerTests : IClassFixture<CustomWebApplicationFactory>
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
+    [Fact]
+    public async Task AddItem_WhenCartContainsRoomFromSameHotel_ShouldReturnNoContent()
+    {
+        var user = await CreateUserAsync(Role.Customer);
+        var hotel = await CreateHotelAsync();
+        var firstRoom = await CreateRoomAsync(hotel.HotelId, 2, 1);
+        var secondRoom = await CreateRoomAsync(hotel.HotelId, 2, 1);
+        await CreateCartItemAsync(user, firstRoom,
+            new DateTime(2030, 1, 10), new DateTime(2030, 1, 12), 2, 0);
+        using var client = CreateAuthenticatedClient(user);
+
+        var response = await client.PostAsJsonAsync("/api/cart/items", ValidRequest(secondRoom.RoomId));
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task AddItem_WhenCartContainsRoomFromDifferentHotel_ShouldReturnConflictAndKeepExistingCart()
+    {
+        var user = await CreateUserAsync(Role.Customer);
+        var (_, firstRoom) = await CreateHotelAndRoomAsync(2, 1);
+        var (_, secondRoom) = await CreateHotelAndRoomAsync(2, 1);
+        var existingItem = await CreateCartItemAsync(user, firstRoom,
+            new DateTime(2030, 1, 10), new DateTime(2030, 1, 12), 2, 0);
+        using var client = CreateAuthenticatedClient(user);
+
+        var response = await client.PostAsJsonAsync("/api/cart/items", ValidRequest(secondRoom.RoomId));
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
+        var cartItems = await db.CartItems.AsNoTracking()
+            .Where(item => item.UserId == user.UserId)
+            .ToListAsync();
+        var item = Assert.Single(cartItems);
+        Assert.Equal(existingItem.CartItemId, item.CartItemId);
+    }
+
     [Theory]
     [InlineData(false, "2030-01-11", "2030-01-12", HttpStatusCode.Conflict)]
     [InlineData(true, "2030-01-11", "2030-01-12", HttpStatusCode.NoContent)]
@@ -340,9 +378,10 @@ public class CartControllerTests : IClassFixture<CustomWebApplicationFactory>
         var invoice = new Invoice(user.UserId, hotel.HotelId, total);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
-        var booking = new Booking(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
-            room.PricePerNight, total, 0, 0m, total, null) { InvoiceId = invoice.InvoiceId };
-        if (cancelled) booking.Cancel();
+        var booking = BookingTestFactory.Create(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
+            room.PricePerNight, total, 0, 0m, total, null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1));
+        booking.AssignToInvoice(invoice);
+        if (cancelled) booking.Cancel(booking.CreatedAt);
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
     }

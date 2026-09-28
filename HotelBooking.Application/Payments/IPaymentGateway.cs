@@ -12,5 +12,7 @@ public interface IPaymentGateway
         IReadOnlyDictionary<string, string> metadata,
         CancellationToken cancellationToken = default);
 
-    PaymentWebhookEvent ParseWebhook(string payload, string signature);
+    Task<PaymentGatewayStatus> CancelAsync(string providerPaymentId, CancellationToken cancellationToken = default);
+    Task<RefundGatewayResult> RefundAsync(string providerPaymentId, string idempotencyKey, CancellationToken cancellationToken = default);
+    PaymentProviderWebhookEvent ParseWebhook(string payload, string signature);
 }

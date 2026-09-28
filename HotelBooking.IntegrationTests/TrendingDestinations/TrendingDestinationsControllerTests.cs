@@ -290,12 +290,9 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         var invoice = new Invoice(user.UserId, room.HotelId, 100m);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
-        var booking = new Booking(user.UserId, room.RoomId, new DateTime(2035, 1, 1), new DateTime(2035, 1, 2), 1, 0, 100m, 100m, 0, 0m, 100m, null)
-        {
-            InvoiceId = invoice.InvoiceId,
-            BookingStatus = status,
-            CreatedAt = createdAt
-        };
+        var booking = BookingTestFactory.Create(user.UserId, room.RoomId, new DateTime(2035, 1, 1), new DateTime(2035, 1, 2), 1, 0, 100m, 100m, 0, 0m, 100m, null, createdAt, createdAt.AddHours(1));
+        booking.AssignToInvoice(invoice);
+        booking.TransitionTo(status);
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
         return booking;

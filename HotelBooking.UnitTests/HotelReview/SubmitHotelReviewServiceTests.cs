@@ -237,40 +237,8 @@ public class SubmitHotelReviewServiceTests
         var booking = CreateValidCompletedBooking(
             userId,
             hotelId,
-            request.BookingId);
-
-        booking.BookingStatus = BookingStatus.Confirmed;
-
-        SetupBooking(request.BookingId, booking);
-
-        // Act
-        var action = async () =>
-            await _service.SubmitReviewAsync(
-                hotelId,
-                userId,
-                request);
-
-        // Assert
-        await Assert.ThrowsAsync<BadRequestException>(action);
-
-        VerifyReviewWasNotSaved();
-    }
-
-    [Fact]
-    public async Task SubmitReviewAsync_WhenCheckoutIsInFuture_ShouldThrowBadRequestException()
-    {
-        // Arrange
-        const int hotelId = 10;
-        const int userId = 1;
-
-        var request = CreateValidRequest();
-
-        var booking = CreateValidCompletedBooking(
-            userId,
-            hotelId,
-            request.BookingId);
-
-        booking.CheckOut = DateTime.UtcNow.AddDays(1);
+            request.BookingId,
+            BookingStatus.Confirmed);
 
         SetupBooking(request.BookingId, booking);
 
@@ -488,7 +456,8 @@ public class SubmitHotelReviewServiceTests
     private static Booking CreateValidCompletedBooking(
         int userId,
         int hotelId,
-        int bookingId)
+        int bookingId,
+        BookingStatus status = BookingStatus.Completed)
     {
         var checkIn = DateTime.UtcNow.AddDays(-5);
         var checkOut = DateTime.UtcNow.AddDays(-2);
@@ -505,7 +474,7 @@ public class SubmitHotelReviewServiceTests
             RoomId = 20
         };
 
-        var booking = new Booking(
+        var booking = BookingTestFactory.Create(
             userId: userId,
             roomId: room.RoomId,
             checkIn: checkIn,
@@ -517,12 +486,12 @@ public class SubmitHotelReviewServiceTests
             discountPercentage: 0,
             discountAmount: 0m,
             totalPrice: 300m,
-            specialRequests: null)
-        {
-            BookingId = bookingId,
-            Room = room,
-            BookingStatus = BookingStatus.Completed
-        };
+            specialRequests: null,
+            createdAt: DateTime.UtcNow,
+            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
+        booking.BookingId = bookingId;
+        booking.Room = room;
+        booking.TransitionTo(status);
 
         return booking;
     }

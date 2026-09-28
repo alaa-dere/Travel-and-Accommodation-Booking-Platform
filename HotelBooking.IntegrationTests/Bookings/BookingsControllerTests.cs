@@ -390,9 +390,10 @@ public class BookingsControllerTests : IClassFixture<CustomWebApplicationFactory
         var invoice = new Invoice(user.UserId, hotel.HotelId, total);
         db.Invoices.Add(invoice);
         await db.SaveChangesAsync();
-        var booking = new Booking(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
-            room.PricePerNight, total, 0, 0m, total, null) { InvoiceId = invoice.InvoiceId };
-        if (cancelled) booking.Cancel();
+        var booking = BookingTestFactory.Create(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
+            room.PricePerNight, total, 0, 0m, total, null, DateTime.UtcNow, DateTime.UtcNow.AddHours(1));
+        booking.AssignToInvoice(invoice);
+        if (cancelled) booking.Cancel(booking.CreatedAt);
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
         return (booking, invoice);

@@ -19,14 +19,28 @@ public class PaymentRepository : IPaymentRepository
         await _dbContext.Payments.AddAsync(payment);
     }
 
+    public Task<Payment?> GetByIdAsync(int paymentId) => QueryForPaymentProcessing()
+        .SingleOrDefaultAsync(payment => payment.PaymentId == paymentId);
+
     public Task<Payment?> GetByProviderPaymentIdAsync(string providerPaymentId)
+    {
+        return QueryForPaymentProcessing()
+            .SingleOrDefaultAsync(payment => payment.ProviderPaymentId == providerPaymentId);
+    }
+
+    private IQueryable<Payment> QueryForPaymentProcessing()
     {
         return _dbContext.Payments
             .Include(payment => payment.Invoice)
                 .ThenInclude(invoice => invoice!.Hotel)
             .Include(payment => payment.Invoice)
                 .ThenInclude(invoice => invoice!.Bookings)
-                    .ThenInclude(booking => booking.Room)
-            .SingleOrDefaultAsync(payment => payment.ProviderPaymentId == providerPaymentId);
+                    .ThenInclude(booking => booking.Room);
+    }
+
+    public Task<Payment?> GetByProviderRefundIdAsync(string providerRefundId)
+    {
+        return _dbContext.Payments
+            .SingleOrDefaultAsync(payment => payment.ProviderRefundId == providerRefundId);
     }
 }

@@ -82,6 +82,9 @@ namespace HotelBooking.Infrastructure.Migrations
                     b.Property<decimal>("OriginalTotalPrice")
                         .HasColumnType("decimal(18,2)");
 
+                    b.Property<DateTime>("PendingExpiresAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<decimal>("PricePerNight")
                         .HasColumnType("decimal(18,2)");
 
@@ -106,6 +109,8 @@ namespace HotelBooking.Infrastructure.Migrations
                     b.HasIndex("InvoiceId");
 
                     b.HasIndex("UserId");
+
+                    b.HasIndex("BookingStatus", "PendingExpiresAt");
 
                     b.HasIndex("RoomId", "CheckIn", "CheckOut");
 
@@ -385,6 +390,17 @@ namespace HotelBooking.Infrastructure.Migrations
                         .HasMaxLength(255)
                         .HasColumnType("nvarchar(255)");
 
+                    b.Property<string>("ProviderRefundId")
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("RefundFailureCode")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("RefundStatus")
+                        .HasColumnType("int");
+
                     b.Property<int>("Status")
                         .HasColumnType("int");
 
@@ -396,6 +412,10 @@ namespace HotelBooking.Infrastructure.Migrations
                     b.HasIndex("ProviderPaymentId")
                         .IsUnique()
                         .HasFilter("[ProviderPaymentId] IS NOT NULL");
+
+                    b.HasIndex("ProviderRefundId")
+                        .IsUnique()
+                        .HasFilter("[ProviderRefundId] IS NOT NULL");
 
                     b.ToTable("Payments");
                 });

@@ -8,10 +8,12 @@ namespace HotelBooking.Application.Bookings.Cancel;
 public class CancelBookingService : ICancelBookingService
 {
     private readonly IBookingRepository _bookingRepository;
+    private readonly TimeProvider _timeProvider;
 
-    public CancelBookingService(IBookingRepository bookingRepository)
+    public CancelBookingService(IBookingRepository bookingRepository, TimeProvider timeProvider)
     {
         _bookingRepository = bookingRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task CancelAsync(int bookingId, int userId)
@@ -38,12 +40,13 @@ public class CancelBookingService : ICancelBookingService
             throw new ConflictException("Booking is already cancelled.");
         }
 
-        if (DateTime.UtcNow >= booking.CheckIn)
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
+        if (utcNow >= booking.CheckIn)
         {
             throw new ConflictException("Booking cannot be cancelled after the stay has started.");
         }
 
-        booking.Cancel();
+        booking.CancelByCustomer(utcNow);
         await _bookingRepository.SaveChangesAsync();
     }
 }
