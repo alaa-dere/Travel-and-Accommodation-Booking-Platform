@@ -95,6 +95,29 @@ public class LoginServiceTests
         _jwtTokenGeneratorMock.Verify(generator => generator.GenerateToken(user), Times.Once);
     }
 
+    [Fact]
+    public async Task LoginAsync_WhenUsernameContainsWhitespaceAndMixedCase_ShouldUseNormalizedUsername()
+    {
+        // Arrange
+        var user = CreateUser();
+        var request = new LoginRequestDto
+        {
+            Username = "  AlAa  ",
+            Password = "password123"
+        };
+
+        _userRepositoryMock.Setup(repository => repository.GetByUsernameAsync("alaa")).ReturnsAsync(user);
+        _passwordHasherMock.Setup(hasher => hasher.VerifyPassword(user.PasswordHash, request.Password)).Returns(true);
+        _jwtTokenGeneratorMock.Setup(generator => generator.GenerateToken(user)).Returns("generated-jwt-token");
+
+        // Act
+        var result = await _service.LoginAsync(request);
+
+        // Assert
+        Assert.Equal("generated-jwt-token", result);
+        _userRepositoryMock.Verify(repository => repository.GetByUsernameAsync("alaa"), Times.Once);
+    }
+
     private static User CreateUser()
     {
         return new User(

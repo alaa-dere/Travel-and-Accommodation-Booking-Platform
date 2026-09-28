@@ -99,6 +99,22 @@ builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddProblemDetails();
 builder.Services.Configure<JwtSettings>(builder.Configuration.GetSection("Jwt"));
 builder.Services.Configure<StripeSettings>(builder.Configuration.GetSection(StripeSettings.SectionName));
+
+var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>()
+                  ?? throw new InvalidOperationException("JWT configuration is missing.");
+if (string.IsNullOrWhiteSpace(jwtSettings.Issuer) || string.IsNullOrWhiteSpace(jwtSettings.Audience))
+{
+    throw new InvalidOperationException("JWT issuer and audience are required.");
+}
+if (jwtSettings.ExpirationMinutes <= 0)
+{
+    throw new InvalidOperationException("JWT expiration must be greater than zero minutes.");
+}
+if (string.IsNullOrWhiteSpace(jwtSettings.Key) || Encoding.UTF8.GetByteCount(jwtSettings.Key) < 32)
+{
+    throw new InvalidOperationException("JWT signing key must be at least 32 bytes.");
+}
+
 var bookingSettings = builder.Configuration
     .GetSection(BookingSettings.SectionName)
     .Get<BookingSettings>() ?? new BookingSettings();
@@ -117,11 +133,6 @@ if (bookingSettings.ExpirationCheckIntervalSeconds <= 0)
 builder.Services.AddSingleton(bookingSettings);
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
-var jwtKey = builder.Configuration["Jwt:Key"];
-if (string.IsNullOrWhiteSpace(jwtKey))
-{
-    throw new InvalidOperationException("JWT Key is missing.");
-}
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
@@ -129,11 +140,12 @@ builder.Services
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidIssuer = jwtSettings.Issuer,
             ValidateAudience = true,
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidAudience = jwtSettings.Audience,
             ValidateIssuerSigningKey = true,
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key)),
+            ValidAlgorithms = new[] { SecurityAlgorithms.HmacSha256 },
             ValidateLifetime = true,
             ClockSkew = TimeSpan.Zero
         };

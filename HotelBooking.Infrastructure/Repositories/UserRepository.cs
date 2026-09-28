@@ -1,6 +1,8 @@
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
 using HotelBooking.Infrastructure.Persistence;
+using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 
 namespace HotelBooking.Infrastructure.Repositories;
@@ -32,7 +34,15 @@ public class UserRepository : IUserRepository
 
     public async Task SaveChangesAsync()
     {
-        await _dbContext.SaveChangesAsync();
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (
+            exception.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            throw new ConflictException("Username or email already exists");
+        }
     }
 
     public async Task<User?> GetByUsernameAsync(string username)

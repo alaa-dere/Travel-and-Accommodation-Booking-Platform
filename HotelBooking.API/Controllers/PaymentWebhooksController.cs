@@ -1,12 +1,10 @@
 using HotelBooking.Application.Payments;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace HotelBooking.API.Controllers;
 
 [ApiController]
 [Route("api/payments/webhooks")]
-[AllowAnonymous]
 public sealed class PaymentWebhooksController : ControllerBase
 {
     private readonly IPaymentWebhookService _webhookService;

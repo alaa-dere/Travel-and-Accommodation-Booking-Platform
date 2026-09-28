@@ -87,6 +87,36 @@ public class RegisterServiceTests
         _userRepositoryMock.Verify(repository => repository.SaveChangesAsync(), Times.Once);
     }
 
+    [Fact]
+    public async Task RegisterAsync_WhenIdentityFieldsContainWhitespaceAndMixedCase_ShouldNormalizeThem()
+    {
+        // Arrange
+        var request = new RegisterRequestDto
+        {
+            FirstName = "  Alaa  ",
+            LastName = "  Test  ",
+            Username = "  AlAa  ",
+            Email = "  ALAA@Test.COM  ",
+            Password = "Password123!"
+        };
+        const string hashedPassword = "hashed-password";
+
+        _passwordHasherMock.Setup(hasher => hasher.HashPassword(request.Password)).Returns(hashedPassword);
+
+        // Act
+        await _service.RegisterAsync(request);
+
+        // Assert
+        _userRepositoryMock.Verify(repository => repository.UsernameExistsAsync("alaa"), Times.Once);
+        _userRepositoryMock.Verify(repository => repository.EmailExistsAsync("alaa@test.com"), Times.Once);
+        _userRepositoryMock.Verify(repository => repository.Add(
+            It.Is<User>(user =>
+                user.FirstName == "Alaa" &&
+                user.LastName == "Test" &&
+                user.Username == "alaa" &&
+                user.Email == "alaa@test.com")), Times.Once);
+    }
+
     private static RegisterRequestDto CreateValidRequest()
     {
         return new RegisterRequestDto

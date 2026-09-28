@@ -22,7 +22,7 @@ public class AuthController : ControllerBase
     public async Task<IActionResult> RegisterAsync(RegisterRequestDto request)
     {
         await _registerService.RegisterAsync(request);
-        return Ok();
+        return StatusCode(StatusCodes.Status201Created);
     }
 
     [HttpPost("login")]

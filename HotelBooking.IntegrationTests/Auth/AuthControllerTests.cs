@@ -23,7 +23,7 @@ public class AuthControllerTests :
     }
 
     [Fact]
-    public async Task Register_WhenRequestIsValid_ShouldReturnOkAndSaveUser()
+    public async Task Register_WhenRequestIsValid_ShouldReturnCreatedAndSaveUser()
     {
         // Arrange
         var request = new RegisterRequestDto
@@ -32,7 +32,7 @@ public class AuthControllerTests :
             LastName = "Test",
             Username = "register_valid_user",
             Email = "register_valid@test.com",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         // Act
@@ -40,7 +40,7 @@ public class AuthControllerTests :
             await _client.PostAsJsonAsync("/api/Auth/register", request);
 
         // Assert
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
 
         using var scope = _factory.Services.CreateScope();
 
@@ -72,7 +72,7 @@ public class AuthControllerTests :
             LastName = "User",
             Username = "duplicate_username",
             Email = "first@test.com",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         var secondRequest = new RegisterRequestDto
@@ -81,7 +81,7 @@ public class AuthControllerTests :
             LastName = "User",
             Username = "duplicate_username",
             Email = "second@test.com",
-            Password = "Password456"
+            Password = "Password456!"
         };
 
         await _client.PostAsJsonAsync(
@@ -110,7 +110,7 @@ public class AuthControllerTests :
             LastName = "User",
             Username = "email_user_one",
             Email = "duplicate@test.com",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         var secondRequest = new RegisterRequestDto
@@ -119,7 +119,7 @@ public class AuthControllerTests :
             LastName = "User",
             Username = "email_user_two",
             Email = "duplicate@test.com",
-            Password = "Password456"
+            Password = "Password456!"
         };
 
         await _client.PostAsJsonAsync(
@@ -148,7 +148,7 @@ public class AuthControllerTests :
             LastName = "Test",
             Username = "invalid_email_user",
             Email = "not-an-email",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         // Act
@@ -198,7 +198,7 @@ public class AuthControllerTests :
             LastName = "Test",
             Username = "missing_field_user",
             Email = "missing@test.com",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         // Act
@@ -223,7 +223,7 @@ public class AuthControllerTests :
             LastName = "User",
             Username = "valid_login_user",
             Email = "validlogin@test.com",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         await _client.PostAsJsonAsync(
@@ -259,7 +259,7 @@ public class AuthControllerTests :
         var request = new LoginRequestDto
         {
             Username = "user_that_does_not_exist",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         // Act
@@ -284,7 +284,7 @@ public class AuthControllerTests :
             LastName = "Password",
             Username = "wrong_password_user",
             Email = "wrongpassword@test.com",
-            Password = "Password123"
+            Password = "Password123!"
         };
 
         await _client.PostAsJsonAsync(
@@ -332,13 +332,13 @@ public class AuthControllerTests :
     }
 
     [Fact]
-    public async Task Login_WhenPasswordIsTooShort_ShouldReturnBadRequest()
+    public async Task Login_WhenPasswordExceedsMaximumLength_ShouldReturnBadRequest()
     {
         // Arrange
         var request = new LoginRequestDto
         {
             Username = "valid_username",
-            Password = "1234567"
+            Password = new string('a', 129)
         };
 
         // Act

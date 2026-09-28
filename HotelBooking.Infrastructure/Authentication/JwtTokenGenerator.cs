@@ -12,10 +12,12 @@ namespace HotelBooking.Infrastructure.Authentication;
 public class JwtTokenGenerator : IJwtTokenGenerator
 {
     private readonly JwtSettings _jwtSettings;
+    private readonly TimeProvider _timeProvider;
 
-    public JwtTokenGenerator(IOptions<JwtSettings> jwtOptions)
+    public JwtTokenGenerator(IOptions<JwtSettings> jwtOptions, TimeProvider timeProvider)
     {
         _jwtSettings = jwtOptions.Value;
+        _timeProvider = timeProvider;
     }
     public string GenerateToken(User user)
     {
@@ -30,12 +32,14 @@ public class JwtTokenGenerator : IJwtTokenGenerator
         var credentials  = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
         var issuer = _jwtSettings.Issuer;
         var audience = _jwtSettings.Audience;
-        var expires = DateTime.UtcNow.AddMinutes(_jwtSettings.ExpirationMinutes);
+        var issuedAt = _timeProvider.GetUtcNow().UtcDateTime;
+        var expires = issuedAt.AddMinutes(_jwtSettings.ExpirationMinutes);
 
         var token = new JwtSecurityToken(
             issuer: issuer,
             audience: audience,
             claims: claims,
+            notBefore: issuedAt,
             expires: expires,
             signingCredentials: credentials
         );

@@ -17,14 +17,14 @@ public class RegisterService : IRegisterService
 
     public async Task RegisterAsync(RegisterRequestDto request)
     {
-        var username = request.Username;
+        var username = request.Username.Trim().ToLowerInvariant();
         bool usernameExists = await _userRepository.UsernameExistsAsync(username);
         if (usernameExists)
         {
             throw new ConflictException($"Username {username} already exists");
         }
         
-        var email = request.Email;
+        var email = request.Email.Trim().ToLowerInvariant();
         bool emailExists = await _userRepository.EmailExistsAsync(email);
         if (emailExists)
         {
@@ -34,7 +34,7 @@ public class RegisterService : IRegisterService
         var password = request.Password;
         var passwordHash = _passwordHasher.HashPassword(password);
 
-        var user = new User(request.FirstName, request.LastName, username, email, passwordHash, Role.Customer);
+        var user = new User(request.FirstName.Trim(), request.LastName.Trim(), username, email, passwordHash, Role.Customer);
         
         _userRepository.Add(user);
         await _userRepository.SaveChangesAsync();

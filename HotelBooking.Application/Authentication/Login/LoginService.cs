@@ -18,7 +18,7 @@ public class LoginService : ILoginService
 
     public async Task<string> LoginAsync(LoginRequestDto request)
     {
-        var username = request.Username;
+        var username = request.Username.Trim().ToLowerInvariant();
         var user = await _userRepository.GetByUsernameAsync(username);
         if (user == null)
         {
