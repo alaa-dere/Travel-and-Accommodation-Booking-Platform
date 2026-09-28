@@ -23,5 +23,7 @@ public class RoomRequestDto
 
     [Range(typeof(decimal), "0.01", "79228162514264337593543950335")]
     public decimal PricePerNight { get; set; } 
+
+    [MaxLength(2000)]
     public string? Description { get; set; }
 }

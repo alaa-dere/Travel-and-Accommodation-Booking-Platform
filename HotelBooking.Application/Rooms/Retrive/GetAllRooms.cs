@@ -1,4 +1,5 @@
-using HotelBooking.Application.AvailableRooms.Dtos;
+using HotelBooking.Application.Common;
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Application.Rooms.Dtos;
 
@@ -13,30 +14,13 @@ public class GetAllRooms : IGetAllRoomsService
         _roomRepository = roomRepository;
     }
 
-    public async Task<IEnumerable<RoomResponseDto>> GetAllRoomsAsync(RoomFilterDto filter)
+    public async Task<PagedResult<RoomResponseDto>> GetAllRoomsAsync(RoomFilterDto filter)
     {
-        var rooms = await _roomRepository.GetRoomsAsync(filter);
-        var results = rooms.Select(room => new RoomResponseDto()
+        if (filter.PageNumber < 1)
         {
-            RoomId = room.RoomId,
-            HotelId = room.HotelId,
-            RoomNumber =  room.RoomNumber,
-            RoomType = room.RoomType,
-            AdultsCapacity = room.AdultsCapacity,
-            ChildCapacity = room.ChildCapacity,
-            PricePerNight = room.PricePerNight,
-            IsOperationallyAvailable = room.IsOperationallyAvailable,
-            IsActive = room.IsActive,
-            Description = room.Description,
-            Images = room.RoomImages
-                .OrderBy(image => image.DisplayOrder)
-                .Select(image => new RoomImageResponseDto
-                {
-                    ImageUrl = image.ImageUrl,
-                    DisplayOrder = image.DisplayOrder
-                })
-                .ToList()
-        });
-        return results;
+            throw new BadRequestException("Page number must be greater than zero.");
+        }
+
+        return await _roomRepository.GetRoomsAsync(filter);
     }
 }

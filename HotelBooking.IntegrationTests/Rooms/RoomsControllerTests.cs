@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Application.Rooms.Dtos;
 using HotelBooking.Domain.Entities;
@@ -91,6 +92,33 @@ public class RoomsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.GetAsync($"/api/Rooms?search={Guid.NewGuid():N}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         Assert.Empty(await ReadRoomsAsync(response));
+    }
+
+    [Fact]
+    public async Task GetRooms_WhenMoreThanOnePageExists_ShouldReturnPagesWithHasNextPage()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var hotel = await CreateHotelAsync();
+        var token = Unique("PagedRoom");
+        for (var index = 1; index <= 11; index++)
+        {
+            await CreateRoomAsync(hotel.HotelId, $"{token}-{index:D2}");
+        }
+        using var client = CreateAuthenticatedClient(admin);
+
+        var firstPage = await client.GetFromJsonAsync<PagedResult<RoomResponseDto>>(
+            $"/api/Rooms?search={token}&pageNumber=1",
+            JsonOptions);
+        var secondPage = await client.GetFromJsonAsync<PagedResult<RoomResponseDto>>(
+            $"/api/Rooms?search={token}&pageNumber=2",
+            JsonOptions);
+
+        Assert.NotNull(firstPage);
+        Assert.Equal(10, firstPage.Items.Count());
+        Assert.True(firstPage.HasNextPage);
+        Assert.NotNull(secondPage);
+        Assert.Single(secondPage.Items);
+        Assert.False(secondPage.HasNextPage);
     }
 
     [Theory]
@@ -294,9 +322,27 @@ public class RoomsControllerTests : IClassFixture<CustomWebApplicationFactory>
     {
         var admin = await CreateUserAsync(Role.Admin);
         using var client = CreateAuthenticatedClient(admin);
-        var content = action == "status" ? JsonContent.Create(new ChangeRoomStatusRequest()) : JsonContent.Create(new ChangeRoomOperationalAvailabilityRequest());
+        var content = action == "status"
+            ? JsonContent.Create(new ChangeRoomStatusRequest { IsActive = true })
+            : JsonContent.Create(new ChangeRoomOperationalAvailabilityRequest
+            {
+                IsOperationallyAvailable = true
+            });
         var response = await client.PatchAsync($"/api/Rooms/999999/{action}", content);
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Theory]
+    [InlineData("status")]
+    [InlineData("operational-availability")]
+    public async Task ChangeRoomFlag_WhenValueIsMissing_ShouldReturnBadRequest(string action)
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        using var client = CreateAuthenticatedClient(admin);
+
+        var response = await client.PatchAsJsonAsync($"/api/Rooms/1/{action}", new { });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
     [Fact]
@@ -463,8 +509,11 @@ public class RoomsControllerTests : IClassFixture<CustomWebApplicationFactory>
         return client;
     }
 
-    private static async Task<List<RoomResponseDto>> ReadRoomsAsync(HttpResponseMessage response) =>
-        await response.Content.ReadFromJsonAsync<List<RoomResponseDto>>(JsonOptions) ?? [];
+    private static async Task<List<RoomResponseDto>> ReadRoomsAsync(HttpResponseMessage response)
+    {
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<RoomResponseDto>>(JsonOptions);
+        return page?.Items.ToList() ?? [];
+    }
 
     private static RoomRequestDto ValidRequest(int hotelId) => new()
     {

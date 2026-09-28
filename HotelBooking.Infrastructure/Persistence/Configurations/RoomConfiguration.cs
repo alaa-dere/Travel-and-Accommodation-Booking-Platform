@@ -13,5 +13,6 @@ public class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.Property( r => r.RoomNumber ).IsRequired().HasMaxLength(50);
         builder.HasIndex( r => new {r.RoomNumber,r.HotelId} ).IsUnique();
         builder.Property(r => r.PricePerNight).HasPrecision(18, 2);
+        builder.Property(r => r.Description).HasMaxLength(2000);
     }
 }

@@ -1,6 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HotelBooking.Application.Rooms.Dtos;
 
 public class ChangeRoomOperationalAvailabilityRequest
 {
-    public bool IsOperationallyAvailable { get; set; }
+    [Required]
+    public bool? IsOperationallyAvailable { get; set; }
 }

@@ -9,4 +9,5 @@ public class RoomFilterDto
     public RoomType? RoomType { get; set; }
     public bool? IsActive { get; set; }
     public bool? IsOperationallyAvailable { get; set; }
+    public int PageNumber { get; set; } = 1;
 }

@@ -79,6 +79,29 @@ public class UpdateRoomTests
     }
 
     [Fact]
+    public async Task UpdateRoomAsync_WhenRoomNumberAlreadyExistsInHotel_ShouldThrowConflictException()
+    {
+        const int roomId = 10;
+        var request = CreateValidRequest();
+        var room = CreateRoom(roomId);
+        var hotel = CreateHotel(request.HotelId);
+        _roomRepositoryMock
+            .Setup(repository => repository.GetRoomByIdAsync(roomId))
+            .ReturnsAsync(room);
+        _hotelRepositoryMock
+            .Setup(repository => repository.GetHotelByIdAsync(request.HotelId))
+            .ReturnsAsync(hotel);
+        _roomRepositoryMock
+            .Setup(repository => repository.ExistsAsync(request.RoomNumber, request.HotelId, roomId))
+            .ReturnsAsync(true);
+
+        var action = () => _service.UpdateRoomAsync(roomId, request);
+
+        await Assert.ThrowsAsync<ConflictException>(action);
+        _roomRepositoryMock.Verify(repository => repository.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task UpdateRoomAsync_ShouldRequestCorrectRoom()
     {
         // Arrange

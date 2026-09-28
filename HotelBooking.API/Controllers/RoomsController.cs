@@ -1,3 +1,4 @@
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Rooms.Create;
 using HotelBooking.Application.Rooms.Delete;
 using HotelBooking.Application.Rooms.Dtos;
@@ -11,7 +12,7 @@ namespace HotelBooking.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles =  "Admin")]
+[Authorize(Roles = "Admin")]
 public class RoomsController : ControllerBase
 {
     private readonly IGetAllRoomsService _getAllRoomsService;
@@ -24,16 +25,15 @@ public class RoomsController : ControllerBase
     public RoomsController(
         ICreateRoomService createRoomService, 
         IGetAllRoomsService getAllRoomsService, 
-        IUpdateRoomService updateRoomlService, 
-        IChangeRoomStatusService  changeRoomStatusService , 
+        IUpdateRoomService updateRoomService,
+        IChangeRoomStatusService changeRoomStatusService,
         IChangeRoomOperationalAvailabilityService changeRoomOperationalAvailabilityService,
         IAddRoomImageService addRoomImageService,
-        IDeleteRoomImageService deleteRoomImageService
-        )
+        IDeleteRoomImageService deleteRoomImageService)
     {
         _createRoomService = createRoomService;
         _getAllRoomsService = getAllRoomsService;
-        _updateRoomService = updateRoomlService;
+        _updateRoomService = updateRoomService;
         _changeRoomStatusService = changeRoomStatusService;
         _changeRoomOperationalAvailabilityService = changeRoomOperationalAvailabilityService;
         _addRoomImageService = addRoomImageService;
@@ -41,48 +41,48 @@ public class RoomsController : ControllerBase
     }
     
     [HttpGet]
-    public async Task<IActionResult> GetAsync([FromQuery] RoomFilterDto filter)
+    public async Task<ActionResult<PagedResult<RoomResponseDto>>> GetRoomsAsync([FromQuery] RoomFilterDto filter)
     {
         var rooms = await _getAllRoomsService.GetAllRoomsAsync(filter);
         return Ok(rooms);
     }
     
     [HttpPost]
-    public async Task<IActionResult> CreateRoomAsync(RoomRequestDto request)
+    public async Task<ActionResult<RoomResponseDto>> CreateRoomAsync(RoomRequestDto request)
     {
         var room = await _createRoomService.CreateRoomAsync(request);
         return Created("api/rooms", room);
     }
     
-    [HttpPut("{roomId:int}")]
-    public async Task<IActionResult> PutAsync(int roomId, RoomRequestDto request)
+    [HttpPut("{roomId:int:min(1)}")]
+    public async Task<ActionResult<RoomResponseDto>> PutAsync(int roomId, RoomRequestDto request)
     {
         var room = await _updateRoomService.UpdateRoomAsync(roomId, request);
         return Ok(room);
     }
     
-    [HttpPatch("{roomId:int}/status")]
+    [HttpPatch("{roomId:int:min(1)}/status")]
     public async Task<IActionResult> ChangeStatusAsync(int roomId, ChangeRoomStatusRequest request)
     { 
-        await _changeRoomStatusService.ChangeRoomStatusAsync(roomId, request.IsActive);
+        await _changeRoomStatusService.ChangeRoomStatusAsync(roomId, request.IsActive!.Value);
         return NoContent();
     }
     
-    [HttpPatch("{roomId:int}/operational-availability")]
+    [HttpPatch("{roomId:int:min(1)}/operational-availability")]
     public async Task<IActionResult> ChangeOperationalAvailabilityAsync(int roomId, ChangeRoomOperationalAvailabilityRequest request)
     {
-        await _changeRoomOperationalAvailabilityService.ChangeOperationalAvailabilityAsync(roomId, request.IsOperationallyAvailable);
+        await _changeRoomOperationalAvailabilityService.ChangeOperationalAvailabilityAsync(roomId, request.IsOperationallyAvailable!.Value);
         return NoContent();
     }
     
-    [HttpPost("{roomId:int}/images")]
+    [HttpPost("{roomId:int:min(1)}/images")]
     public async Task<IActionResult> AddImageAsync(int roomId, AddRoomImageRequestDto request)
     {
         await _addRoomImageService.AddRoomImageAsync(roomId, request);
         return NoContent();
     }
     
-    [HttpDelete("{roomId:int}/images/{imageId:int}")]
+    [HttpDelete("{roomId:int:min(1)}/images/{imageId:int:min(1)}")]
     public async Task<IActionResult> DeleteImageAsync(int roomId, int imageId)
     {
         await _deleteRoomImageService.DeleteRoomImageAsync(roomId, imageId);

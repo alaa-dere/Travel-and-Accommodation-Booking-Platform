@@ -28,14 +28,28 @@ public class UpdateRoom : IUpdateRoomService
         {
             throw new NotFoundException("Hotel does not exist");
         }
-        
-        room.Update(request.RoomNumber, request.RoomType, request.PricePerNight, request.AdultsCapacity, request.ChildCapacity, request.HotelId, request.Description);
+
+        var normalizedRoomNumber = request.RoomNumber.Trim();
+        if (await _roomRepository.ExistsAsync(normalizedRoomNumber, request.HotelId, id))
+        {
+            throw new ConflictException("A room with the same number already exists in this hotel.");
+        }
+
+        room.Update(
+            normalizedRoomNumber,
+            request.RoomType,
+            request.PricePerNight,
+            request.AdultsCapacity,
+            request.ChildCapacity,
+            request.HotelId,
+            request.Description);
         await _roomRepository.SaveChangesAsync();
         
-        var response = new RoomResponseDto
+        return new RoomResponseDto
         {
             RoomId = room.RoomId,
             HotelId = room.HotelId, 
+            HotelName = hotel.Name,
             RoomNumber = room.RoomNumber,
             RoomType =  room.RoomType,
             AdultsCapacity = room.AdultsCapacity,
@@ -44,7 +58,8 @@ public class UpdateRoom : IUpdateRoomService
             IsOperationallyAvailable = room.IsOperationallyAvailable,
             IsActive = room.IsActive,
             Description = room.Description,
+            CreatedAt = room.CreatedAt,
+            UpdatedAt = room.UpdatedAt
         };
-        return response;
     }
 }
