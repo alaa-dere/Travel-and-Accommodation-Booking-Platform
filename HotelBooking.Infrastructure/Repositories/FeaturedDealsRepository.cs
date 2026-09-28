@@ -45,14 +45,18 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
 
                 BookingCountLast30Days = hotel.Rooms
                     .SelectMany(room => room.Bookings)
-                    .Count(booking => booking.CreatedAt >= thirtyDaysAgo && booking.BookingStatus != BookingStatus.Cancelled),
+                    .Count(booking =>
+                        booking.CreatedAt >= thirtyDaysAgo &&
+                        (booking.BookingStatus == BookingStatus.Confirmed ||
+                         booking.BookingStatus == BookingStatus.Completed)),
 
                 AverageRating = (decimal?)hotel.Rooms
                     .SelectMany(room => room.Bookings)
                     .Where(booking => booking.Review != null)
                     .Average(booking => (double?)booking.Review!.Rating)
             })
-            .OrderByDescending(deal => deal.BookingCountLast30Days)
+            .OrderBy(deal => deal.BookingCountLast30Days)
+            .ThenBy(deal => deal.HotelId)
             .Take(5);
 
         return await query.ToListAsync();

@@ -62,8 +62,8 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
         await CreatePromotionAsync(hotel.HotelId, 10);
         await CreatePromotionAsync(hotel.HotelId, 25);
         await CreateHotelImagesAsync(hotel.HotelId, ("second.jpg", 2), ("first.jpg", 1));
-        var firstBooking = await CreateBookingAsync(customer, hotel, expensiveRoom, false, DateTime.UtcNow.AddDays(-2));
-        var secondBooking = await CreateBookingAsync(customer, hotel, cheapestRoom, false, DateTime.UtcNow.AddDays(-1));
+        var firstBooking = await CreateBookingAsync(customer, hotel, expensiveRoom, BookingStatus.Confirmed, DateTime.UtcNow.AddDays(-2));
+        var secondBooking = await CreateBookingAsync(customer, hotel, cheapestRoom, BookingStatus.Confirmed, DateTime.UtcNow.AddDays(-1));
         await CreateReviewAsync(firstBooking.BookingId, 4);
         await CreateReviewAsync(secondBooking.BookingId, 2);
         using var client = CreateAuthenticatedClient(customer);
@@ -148,8 +148,9 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
     }
 
     [Fact]
-    public async Task GetFeaturedDeals_ShouldOrderByRecentNonCancelledBookingCountDescendingAndTakeFive()
+    public async Task GetFeaturedDeals_ShouldPrioritizeHotelsWithFewerRecentBookingsAndTakeFive()
     {
+        await DeactivateExistingPromotionsAsync();
         var customer = await CreateUserAsync(Role.Customer);
         var expectedHotelIds = new List<int>();
         for (var bookingCount = 0; bookingCount < 6; bookingCount++)
@@ -157,12 +158,11 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
             var deal = await CreateEligibleDealAsync();
             for (var bookingIndex = 0; bookingIndex < bookingCount + 10; bookingIndex++)
             {
-                await CreateBookingAsync(customer, deal.Hotel, deal.Room, false,
+                await CreateBookingAsync(customer, deal.Hotel, deal.Room, BookingStatus.Confirmed,
                     DateTime.UtcNow.AddDays(-bookingIndex - 1));
             }
             expectedHotelIds.Add(deal.Hotel.HotelId);
         }
-        expectedHotelIds.Reverse();
         expectedHotelIds = expectedHotelIds.Take(5).ToList();
         using var client = CreateAuthenticatedClient(customer);
 
@@ -176,14 +176,16 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
     }
 
     [Fact]
-    public async Task GetFeaturedDeals_ShouldIgnoreCancelledAndOlderThanThirtyDayBookingsForRanking()
+    public async Task GetFeaturedDeals_ShouldIgnorePendingCancelledAndOlderBookingsForRanking()
     {
+        await DeactivateExistingPromotionsAsync();
         var customer = await CreateUserAsync(Role.Customer);
         var popular = await CreateEligibleDealAsync();
         var ignored = await CreateEligibleDealAsync();
-        await CreateBookingAsync(customer, popular.Hotel, popular.Room, false, DateTime.UtcNow.AddDays(-1));
-        await CreateBookingAsync(customer, ignored.Hotel, ignored.Room, true, DateTime.UtcNow.AddDays(-1));
-        await CreateBookingAsync(customer, ignored.Hotel, ignored.Room, false, DateTime.UtcNow.AddDays(-31));
+        await CreateBookingAsync(customer, popular.Hotel, popular.Room, BookingStatus.Confirmed, DateTime.UtcNow.AddDays(-1));
+        await CreateBookingAsync(customer, ignored.Hotel, ignored.Room, BookingStatus.Pending, DateTime.UtcNow.AddDays(-1));
+        await CreateBookingAsync(customer, ignored.Hotel, ignored.Room, BookingStatus.Cancelled, DateTime.UtcNow.AddDays(-1));
+        await CreateBookingAsync(customer, ignored.Hotel, ignored.Room, BookingStatus.Confirmed, DateTime.UtcNow.AddDays(-31));
         using var client = CreateAuthenticatedClient(customer);
 
         var response = await client.GetAsync("/api/FeaturedDeals");
@@ -191,8 +193,8 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var result = await response.Content.ReadFromJsonAsync<List<FeaturedDealResponseDto>>();
         Assert.NotNull(result);
-        Assert.True(result.FindIndex(item => item.HotelId == popular.Hotel.HotelId) <
-                    result.FindIndex(item => item.HotelId == ignored.Hotel.HotelId));
+        Assert.True(result.FindIndex(item => item.HotelId == ignored.Hotel.HotelId) <
+                    result.FindIndex(item => item.HotelId == popular.Hotel.HotelId));
     }
 
     private async Task<(Hotel Hotel, Room Room)> CreateEligibleDealAsync()
@@ -201,6 +203,22 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
         var room = await CreateRoomAsync(hotel.HotelId, 100m);
         await CreatePromotionAsync(hotel.HotelId, 20);
         return (hotel, room);
+    }
+
+    private async Task DeactivateExistingPromotionsAsync()
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
+        var activePromotions = await db.Promotions
+            .Where(promotion => promotion.IsActive)
+            .ToListAsync();
+
+        foreach (var promotion in activePromotions)
+        {
+            promotion.Deactivate();
+        }
+
+        await db.SaveChangesAsync();
     }
 
     private async Task<User> CreateUserAsync(
@@ -262,7 +280,11 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
     }
 
     private async Task<Booking> CreateBookingAsync(
-        User user, Hotel hotel, Room room, bool cancelled, DateTime createdAt)
+        User user,
+        Hotel hotel,
+        Room room,
+        BookingStatus status,
+        DateTime createdAt)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
@@ -275,7 +297,14 @@ public class FeaturedDealsControllerTests : IClassFixture<CustomWebApplicationFa
         var booking = BookingTestFactory.Create(user.UserId, room.RoomId, checkIn, checkOut, 2, 0,
             room.PricePerNight, total, 0, 0m, total, null, createdAt, createdAt.AddHours(1));
         booking.AssignToInvoice(invoice);
-        if (cancelled) booking.Cancel(booking.CreatedAt);
+        if (status == BookingStatus.Confirmed)
+        {
+            booking.Confirm(booking.CreatedAt);
+        }
+        else if (status == BookingStatus.Cancelled)
+        {
+            booking.Cancel(booking.CreatedAt);
+        }
         db.Bookings.Add(booking);
         await db.SaveChangesAsync();
         return booking;

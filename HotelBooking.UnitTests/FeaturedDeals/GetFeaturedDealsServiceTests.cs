@@ -7,13 +7,16 @@ namespace HotelBooking.UnitTests.FeatureDeals;
 
 public class GetFeaturedDealsServiceTests
 {
+    private static readonly DateTimeOffset UtcNow = new(2026, 9, 28, 12, 0, 0, TimeSpan.Zero);
     private readonly Mock<IFeaturedDealsRepository> _repositoryMock;
     private readonly GetFeaturedDealsService _service;
 
     public GetFeaturedDealsServiceTests()
     {
         _repositoryMock = new Mock<IFeaturedDealsRepository>();
-        _service = new GetFeaturedDealsService(_repositoryMock.Object);
+        _service = new GetFeaturedDealsService(
+            _repositoryMock.Object,
+            new FixedTimeProvider(UtcNow));
     }
 
     [Fact]
@@ -161,30 +164,21 @@ public class GetFeaturedDealsServiceTests
     public async Task GetFeaturedDealsAsync_ShouldRequestDealsForThirtyDayWindow()
     {
         // Arrange
-        DateTime? capturedNow = null;
-        DateTime? capturedThirtyDaysAgo = null;
-
         _repositoryMock
             .Setup(repository => repository.GetEligibleFeaturedDealsAsync(
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>()))
-            .Callback<DateTime, DateTime>((now, thirtyDaysAgo) =>
-            {
-                capturedNow = now;
-                capturedThirtyDaysAgo = thirtyDaysAgo;
-            })
+                UtcNow.UtcDateTime,
+                UtcNow.UtcDateTime.AddDays(-30)))
             .ReturnsAsync(new List<FeaturedDealData>());
 
         // Act
         await _service.GetFeaturedDealsAsync();
 
         // Assert
-        Assert.NotNull(capturedNow);
-        Assert.NotNull(capturedThirtyDaysAgo);
-
-        Assert.Equal(
-            capturedNow.Value.AddDays(-30),
-            capturedThirtyDaysAgo.Value);
+        _repositoryMock.Verify(
+            repository => repository.GetEligibleFeaturedDealsAsync(
+                UtcNow.UtcDateTime,
+                UtcNow.UtcDateTime.AddDays(-30)),
+            Times.Once);
     }
 
     [Fact]
@@ -241,5 +235,10 @@ public class GetFeaturedDealsServiceTests
             DiscountPercentage = 25,
             BookingCountLast30Days = 5
         };
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

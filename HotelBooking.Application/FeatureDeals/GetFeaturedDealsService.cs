@@ -5,18 +5,22 @@ namespace HotelBooking.Application.FeatureDeals;
 
 public class GetFeaturedDealsService : IFeaturedDealsService
 {
-    private readonly IFeaturedDealsRepository  _featuredDealsRepository;
+    private readonly IFeaturedDealsRepository _featuredDealsRepository;
+    private readonly TimeProvider _timeProvider;
 
-    public GetFeaturedDealsService(IFeaturedDealsRepository featuredDealsRepository)
+    public GetFeaturedDealsService(IFeaturedDealsRepository featuredDealsRepository, TimeProvider timeProvider)
     {
         _featuredDealsRepository = featuredDealsRepository;
+        _timeProvider = timeProvider;
     }
+
     public async Task<IEnumerable<FeaturedDealResponseDto>> GetFeaturedDealsAsync()
     {
-        var now = DateTime.UtcNow;
-        var thirtyDaysAgo  = now.AddDays(-30);
+        var now = _timeProvider.GetUtcNow().UtcDateTime;
+        var thirtyDaysAgo = now.AddDays(-30);
         var deals = await _featuredDealsRepository.GetEligibleFeaturedDealsAsync(now, thirtyDaysAgo);
-        var result = deals.Select(deal => new FeaturedDealResponseDto
+
+        return deals.Select(deal => new FeaturedDealResponseDto
         {
             HotelId = deal.HotelId,
             HotelName = deal.HotelName,
@@ -28,6 +32,5 @@ public class GetFeaturedDealsService : IFeaturedDealsService
             DiscountPercentage = deal.DiscountPercentage,
             DiscountedPrice = deal.StartingPrice - (deal.StartingPrice * deal.DiscountPercentage / 100m)
         });
-        return result;
     }
 }
