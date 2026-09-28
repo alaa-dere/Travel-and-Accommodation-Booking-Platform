@@ -10,13 +10,14 @@ namespace HotelBooking.UnitTests.Search;
 
 public class SearchHotelsTests
 {
+    private static readonly DateTimeOffset UtcNow = new(2026, 9, 28, 12, 0, 0, TimeSpan.Zero);
     private readonly Mock<IHotelSearchRepository> _repositoryMock;
     private readonly SearchHotels _service;
 
     public SearchHotelsTests()
     {
         _repositoryMock = new Mock<IHotelSearchRepository>();
-        _service = new SearchHotels(_repositoryMock.Object);
+        _service = new SearchHotels(_repositoryMock.Object, new FixedTimeProvider(UtcNow));
     }
 
     [Theory]
@@ -76,6 +77,22 @@ public class SearchHotelsTests
         // Assert
         await Assert.ThrowsAsync<BadRequestException>(action);
 
+        VerifyRepositoryWasNotCalled();
+    }
+
+    [Fact]
+    public async Task SearchHotelsAsync_WhenCheckInIsInThePast_ShouldThrowBadRequestException()
+    {
+        // Arrange
+        var request = CreateValidRequest();
+        request.CheckIn = UtcNow.UtcDateTime.Date.AddDays(-1);
+        request.CheckOut = UtcNow.UtcDateTime.Date.AddDays(1);
+
+        // Act
+        var action = async () => await _service.SearchHotelsAsync(request);
+
+        // Assert
+        await Assert.ThrowsAsync<BadRequestException>(action);
         VerifyRepositoryWasNotCalled();
     }
 
@@ -620,7 +637,7 @@ public class SearchHotelsTests
         hotel.City = new City(
             "Nablus",
             "Palestine",
-            null);
+            "P400");
 
         return hotel;
     }
@@ -645,5 +662,10 @@ public class SearchHotelsTests
         };
 
         hotel.Rooms.Add(room);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

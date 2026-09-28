@@ -7,10 +7,12 @@ namespace HotelBooking.Application.Search;
 public class SearchHotels : ISearchHotelsService
 {
     private readonly IHotelSearchRepository _hotelSearchRepository;
+    private readonly TimeProvider _timeProvider;
 
-    public SearchHotels(IHotelSearchRepository hotelSearchRepository)
+    public SearchHotels(IHotelSearchRepository hotelSearchRepository, TimeProvider timeProvider)
     {
         _hotelSearchRepository = hotelSearchRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task<PagedResult<HotelSearchResponseDto>> SearchHotelsAsync(HotelSearchRequestDto request)
@@ -26,7 +28,7 @@ public class SearchHotels : ISearchHotelsService
         };
     }
 
-    private static void ValidateRequest(HotelSearchRequestDto request)
+    private void ValidateRequest(HotelSearchRequestDto request)
     {
         if (string.IsNullOrWhiteSpace(request.Destination))
         {
@@ -36,6 +38,11 @@ public class SearchHotels : ISearchHotelsService
         if (request.CheckOut <= request.CheckIn)
         {
             throw new BadRequestException("Check-out date must be after the check-in date.");
+        }
+
+        if (request.CheckIn.Date < _timeProvider.GetUtcNow().UtcDateTime.Date)
+        {
+            throw new BadRequestException("Check-in date cannot be in the past.");
         }
 
         if (request.Adults < 1)

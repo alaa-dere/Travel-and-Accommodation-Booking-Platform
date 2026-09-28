@@ -1,6 +1,7 @@
 using HotelBooking.Application.Common;
+using HotelBooking.Application.Search.Dtos;
 
-namespace HotelBooking.Application.Search.Dtos;
+namespace HotelBooking.Application.Search;
 
 public interface ISearchHotelsService
 {

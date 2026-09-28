@@ -192,6 +192,31 @@ public class SearchControllerTests : IClassFixture<CustomWebApplicationFactory>
         await AssertSingleResultAsync(BuildUrl(token, rooms: 2), hotel.HotelId);
     }
 
+    [Fact]
+    public async Task Search_ShouldDistributeGuestsAcrossRequestedRooms()
+    {
+        var token = Unique("DistributedGuests");
+        var hotel = await CreateHotelAsync(token);
+        await CreateRoomAsync(hotel.HotelId, adults: 2, children: 1);
+        await CreateRoomAsync(hotel.HotelId, adults: 2, children: 1);
+
+        await AssertSingleResultAsync(
+            BuildUrl(token, adults: 4, children: 2, rooms: 2),
+            hotel.HotelId);
+    }
+
+    [Fact]
+    public async Task Search_ShouldExcludeHotelWhenRequestedRoomsHaveInsufficientCombinedCapacity()
+    {
+        var token = Unique("CombinedCapacity");
+        var hotel = await CreateHotelAsync(token);
+        await CreateRoomAsync(hotel.HotelId, adults: 2, children: 1);
+        await CreateRoomAsync(hotel.HotelId, adults: 2, children: 1);
+
+        await AssertNoResultsAsync(
+            BuildUrl(token, adults: 5, children: 2, rooms: 2));
+    }
+
     [Theory]
     [InlineData(BookingStatus.Pending, true)]
     [InlineData(BookingStatus.Confirmed, true)]

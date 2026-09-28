@@ -1,3 +1,4 @@
+using HotelBooking.Application.Search;
 using HotelBooking.Application.Search.Dtos;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;

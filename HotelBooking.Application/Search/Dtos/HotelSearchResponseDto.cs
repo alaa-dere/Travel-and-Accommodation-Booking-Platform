@@ -1,5 +1,7 @@
 using HotelBooking.Domain.Entities;
 
+namespace HotelBooking.Application.Search.Dtos;
+
 public class HotelSearchResponseDto
 {
     public int HotelId { get; set; }
