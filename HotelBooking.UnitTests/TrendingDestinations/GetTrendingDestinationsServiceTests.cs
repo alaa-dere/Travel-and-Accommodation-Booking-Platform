@@ -7,6 +7,7 @@ namespace HotelBooking.UnitTests.TrendingDestinations;
 
 public class GetTrendingDestinationsServiceTests
 {
+    private static readonly DateTimeOffset UtcNow = new(2026, 9, 28, 12, 0, 0, TimeSpan.Zero);
     private readonly Mock<ITrendingDestinationRepository> _repositoryMock;
     private readonly GetTrendingDestinationsService _service;
 
@@ -15,7 +16,8 @@ public class GetTrendingDestinationsServiceTests
         _repositoryMock = new Mock<ITrendingDestinationRepository>();
 
         _service = new GetTrendingDestinationsService(
-            _repositoryMock.Object);
+            _repositoryMock.Object,
+            new FixedTimeProvider(UtcNow));
     }
 
     [Fact]
@@ -65,32 +67,21 @@ public class GetTrendingDestinationsServiceTests
     public async Task GetTrendingDestinationsAsync_ShouldUseDateThirtyDaysAgo()
     {
         // Arrange
-        DateTime? capturedFromDate = null;
-
         _repositoryMock
             .Setup(repository =>
                 repository.GetTrendingDestinationsAsync(
-                    It.IsAny<DateTime>()))
-            .Callback<DateTime>(fromDate =>
-                capturedFromDate = fromDate)
+                    UtcNow.UtcDateTime.AddDays(-30)))
             .ReturnsAsync(
                 new List<TrendingDestinationResponseDto>());
-
-        var beforeCall = DateTime.UtcNow.AddDays(-30);
 
         // Act
         await _service.GetTrendingDestinationsAsync();
 
-        var afterCall = DateTime.UtcNow.AddDays(-30);
-
         // Assert
-        Assert.NotNull(capturedFromDate);
-
-        Assert.True(
-            capturedFromDate >= beforeCall);
-
-        Assert.True(
-            capturedFromDate <= afterCall);
+        _repositoryMock.Verify(
+            repository => repository.GetTrendingDestinationsAsync(
+                UtcNow.UtcDateTime.AddDays(-30)),
+            Times.Once);
     }
 
     [Fact]
@@ -113,5 +104,10 @@ public class GetTrendingDestinationsServiceTests
                 repository.GetTrendingDestinationsAsync(
                     It.IsAny<DateTime>()),
             Times.Once);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

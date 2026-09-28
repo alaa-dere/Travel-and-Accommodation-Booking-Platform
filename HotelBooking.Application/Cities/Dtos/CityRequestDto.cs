@@ -12,4 +12,7 @@ public class CityRequestDto
     public string Country { get; set; }  = string.Empty;
     [Required]
     public string PostOffice  { get; set; }  = string.Empty;
+
+    [MaxLength(500)]
+    public string? ThumbnailUrl { get; set; }
 }

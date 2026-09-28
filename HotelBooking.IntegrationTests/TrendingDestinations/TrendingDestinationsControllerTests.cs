@@ -48,7 +48,8 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
     public async Task GetTrendingDestinations_ShouldMapCityAndBookingCount()
     {
         await ClearBookingsAsync();
-        var city = await CreateCityAsync("Bethlehem", "Palestine");
+        const string thumbnailUrl = "https://images.example.com/bethlehem.jpg";
+        var city = await CreateCityAsync("Bethlehem", "Palestine", thumbnailUrl);
         var hotel = await CreateHotelAsync(city.CityId);
         var room = await CreateRoomAsync(hotel.HotelId);
         await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-2));
@@ -62,6 +63,7 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         Assert.Equal(city.CityId, destination.CityId);
         Assert.Equal("Bethlehem", destination.Name);
         Assert.Equal("Palestine", destination.Country);
+        Assert.Equal(thumbnailUrl, destination.ThumbnailUrl);
         Assert.Equal(2, destination.BookingCount);
     }
 
@@ -120,10 +122,9 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
     }
 
     [Theory]
-    [InlineData(BookingStatus.Pending)]
     [InlineData(BookingStatus.Confirmed)]
     [InlineData(BookingStatus.Completed)]
-    public async Task GetTrendingDestinations_ShouldCountNonCancelledBookingStatus(BookingStatus status)
+    public async Task GetTrendingDestinations_ShouldCountSuccessfulBookingStatus(BookingStatus status)
     {
         await ClearBookingsAsync();
         var city = await CreateCityAsync();
@@ -137,13 +138,15 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         Assert.Equal(1, destination.BookingCount);
     }
 
-    [Fact]
-    public async Task GetTrendingDestinations_ShouldExcludeCancelledBookings()
+    [Theory]
+    [InlineData(BookingStatus.Pending)]
+    [InlineData(BookingStatus.Cancelled)]
+    public async Task GetTrendingDestinations_ShouldExcludeUnsuccessfulBookingStatus(BookingStatus status)
     {
         await ClearBookingsAsync();
         var city = await CreateCityAsync();
         var room = await CreateRoomAsync((await CreateHotelAsync(city.CityId)).HotelId);
-        await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-1), BookingStatus.Cancelled);
+        await CreateBookingAsync(room, DateTime.UtcNow.AddDays(-1), status);
         using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
 
         var destinations = await ReadAsync(await client.GetAsync(Endpoint));
@@ -155,7 +158,7 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
     [InlineData(InactiveSource.Hotel)]
     [InlineData(InactiveSource.Room)]
     [InlineData(InactiveSource.OperationallyUnavailableRoom)]
-    public async Task GetTrendingDestinations_ShouldExcludeBookingsForInactiveInventory(InactiveSource source)
+    public async Task GetTrendingDestinations_ShouldExcludeCitiesWithoutActiveBookableInventory(InactiveSource source)
     {
         await ClearBookingsAsync();
         var city = await CreateCityAsync();
@@ -170,6 +173,26 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         var destinations = await ReadAsync(await client.GetAsync(Endpoint));
 
         Assert.Empty(destinations);
+    }
+
+    [Fact]
+    public async Task GetTrendingDestinations_ShouldCountHistoricalBookingWhenHotelStillHasBookableRoom()
+    {
+        await ClearBookingsAsync();
+        var city = await CreateCityAsync();
+        var hotel = await CreateHotelAsync(city.CityId);
+        var previouslyBookedRoom = await CreateRoomAsync(hotel.HotelId, isActive: false);
+        await CreateRoomAsync(hotel.HotelId);
+        await CreateBookingAsync(
+            previouslyBookedRoom,
+            DateTime.UtcNow.AddDays(-1),
+            BookingStatus.Confirmed);
+        using var client = CreateAuthenticatedClient(await CreateUserAsync(Role.Customer));
+
+        var destination = Assert.Single(await ReadAsync(await client.GetAsync(Endpoint)));
+
+        Assert.Equal(city.CityId, destination.CityId);
+        Assert.Equal(1, destination.BookingCount);
     }
 
     [Fact]
@@ -249,11 +272,14 @@ public class TrendingDestinationsControllerTests : IClassFixture<CustomWebApplic
         return user;
     }
 
-    private async Task<City> CreateCityAsync(string? name = null, string country = "Palestine")
+    private async Task<City> CreateCityAsync(
+        string? name = null,
+        string country = "Palestine",
+        string? thumbnailUrl = null)
     {
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
-        var city = new City(name ?? Unique("City"), country, Unique("PO"));
+        var city = new City(name ?? Unique("City"), country, Unique("PO"), thumbnailUrl);
         db.Cities.Add(city);
         await db.SaveChangesAsync();
         return city;

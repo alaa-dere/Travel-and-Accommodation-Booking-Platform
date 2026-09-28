@@ -19,7 +19,8 @@ public class GetAllCities : IGetAllCitiesService
             CityId =  city.CityId,
             Name = city.Name,
             Country =  city.Country,
-            PostOffice =  city.PostOffice
+            PostOffice = city.PostOffice,
+            ThumbnailUrl = city.ThumbnailUrl
         });
         return results;
     }

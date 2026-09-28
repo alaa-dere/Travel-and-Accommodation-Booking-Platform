@@ -6,11 +6,12 @@ public class City
     public string Name { get; set; }
     public string Country { get; set; }
     public string PostOffice { get; set; }
+    public string? ThumbnailUrl { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? UpdatedAt { get; set; }
     public ICollection<Hotel> Hotels { get; set; } = new List<Hotel>();
 
-    public City(string name, string country, string postOffice)
+    public City(string name, string country, string postOffice, string? thumbnailUrl = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -25,10 +26,11 @@ public class City
         Name = name;
         Country = country;
         PostOffice = postOffice;
+        ThumbnailUrl = ValidateThumbnailUrl(thumbnailUrl);
         CreatedAt = DateTime.UtcNow;
     }
     
-    public void Update(string name, string country, string postOffice)
+    public void Update(string name, string country, string postOffice, string? thumbnailUrl = null)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
@@ -43,6 +45,17 @@ public class City
         Name = name;
         Country = country;
         PostOffice = postOffice;
+        ThumbnailUrl = ValidateThumbnailUrl(thumbnailUrl);
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static string? ValidateThumbnailUrl(string? thumbnailUrl)
+    {
+        if (thumbnailUrl?.Length > 500)
+        {
+            throw new ArgumentException("City thumbnail URL cannot exceed 500 characters.", nameof(thumbnailUrl));
+        }
+
+        return string.IsNullOrWhiteSpace(thumbnailUrl) ? null : thumbnailUrl.Trim();
     }
 }

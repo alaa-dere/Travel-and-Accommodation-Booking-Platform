@@ -20,21 +20,24 @@ public class TrendingDestinationRepository : ITrendingDestinationRepository
         return await _dbContext.Bookings.AsNoTracking()
             .Where(booking =>
                 booking.CreatedAt >= fromDate &&
-                booking.BookingStatus != BookingStatus.Cancelled &&
-                booking.Room!.IsActive &&
-                booking.Room.IsOperationallyAvailable &&
-                booking.Room.Hotel!.IsActive)
+                (booking.BookingStatus == BookingStatus.Confirmed ||
+                 booking.BookingStatus == BookingStatus.Completed) &&
+                booking.Room!.Hotel!.IsActive &&
+                booking.Room.Hotel.Rooms.Any(room =>
+                    room.IsActive && room.IsOperationallyAvailable))
             .GroupBy(booking => new
             {
                 booking.Room!.Hotel!.CityId,
                 booking.Room.Hotel.City.Name,
-                booking.Room.Hotel.City.Country
+                booking.Room.Hotel.City.Country,
+                booking.Room.Hotel.City.ThumbnailUrl
             })
             .Select(group => new TrendingDestinationResponseDto
             {
                 CityId = group.Key.CityId,
                 Name = group.Key.Name,
                 Country = group.Key.Country,
+                ThumbnailUrl = group.Key.ThumbnailUrl,
                 BookingCount = group.Count()
             })
             .OrderByDescending(destination => destination.BookingCount)

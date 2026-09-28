@@ -21,10 +21,17 @@ public class UpdateCity : IUpdateCityService
             throw new NotFoundException("City doesn't exist");
         }
         
-        city.Update(request.Name, request.Country, request.PostOffice);
+        city.Update(request.Name, request.Country, request.PostOffice, request.ThumbnailUrl);
         await _cityRepository.SaveChangesAsync();
         
-        var response = new CityResponseDto{CityId = city.CityId, Name = city.Name, Country = city.Country, PostOffice =  city.PostOffice };
+        var response = new CityResponseDto
+        {
+            CityId = city.CityId,
+            Name = city.Name,
+            Country = city.Country,
+            PostOffice = city.PostOffice,
+            ThumbnailUrl = city.ThumbnailUrl
+        };
         return response;
     }
 }
