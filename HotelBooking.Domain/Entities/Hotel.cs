@@ -26,29 +26,11 @@ public class Hotel
     
     public Hotel(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId,string? description,string? history)
     {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Name is required", nameof(name));
-        }
-
-        if (string.IsNullOrWhiteSpace(ownerName))
-        {
-            throw new ArgumentException("OwnerName is required", nameof(ownerName));
-        }
-
-        if (string.IsNullOrWhiteSpace(address))
-        {
-            throw new ArgumentException("Address is required", nameof(address));
-        }
-
-        if (cityId <= 0)
-        {
-            throw new ArgumentException("CityId should be positive", nameof(cityId));
-        }
+        Validate(name, ownerName, address, latitude, longitude, hotelType, cityId, description, history);
         
-        Name = name ;
-        OwnerName = ownerName ;
-        Address = address ;
+        Name = name.Trim();
+        OwnerName = ownerName.Trim();
+        Address = address.Trim();
         Latitude = latitude;
         Longitude = longitude;
         HotelType = hotelType;
@@ -61,28 +43,11 @@ public class Hotel
     
     public void Update(string name, string ownerName, string address, double latitude, double longitude , HotelType hotelType ,int cityId,string? description,string? history)
     {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            throw new ArgumentException("Name is required", nameof(name));
-        }
+        Validate(name, ownerName, address, latitude, longitude, hotelType, cityId, description, history);
 
-        if (string.IsNullOrWhiteSpace(ownerName))
-        {
-            throw new ArgumentException("OwnerName is required", nameof(ownerName));
-        }
-
-        if (string.IsNullOrWhiteSpace(address))
-        {
-            throw new ArgumentException("Address is required", nameof(address));
-        }
-
-        if (cityId <= 0)
-        {
-            throw new ArgumentException("CityId should be positive", nameof(cityId));
-        }
-        Name = name ;
-        OwnerName = ownerName ;
-        Address = address ;
+        Name = name.Trim();
+        OwnerName = ownerName.Trim();
+        Address = address.Trim();
         Latitude = latitude;
         Longitude = longitude;
         HotelType = hotelType;
@@ -96,5 +61,77 @@ public class Hotel
     {
         IsActive = isActive;
         UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static void Validate(
+        string name,
+        string ownerName,
+        string address,
+        double latitude,
+        double longitude,
+        HotelType hotelType,
+        int cityId,
+        string? description,
+        string? history)
+    {
+        if (string.IsNullOrWhiteSpace(name))
+        {
+            throw new ArgumentException("Name is required", nameof(name));
+        }
+
+        if (name.Length > 50)
+        {
+            throw new ArgumentException("Name cannot exceed 50 characters.", nameof(name));
+        }
+
+        if (string.IsNullOrWhiteSpace(ownerName))
+        {
+            throw new ArgumentException("OwnerName is required", nameof(ownerName));
+        }
+
+        if (ownerName.Length > 50)
+        {
+            throw new ArgumentException("Owner name cannot exceed 50 characters.", nameof(ownerName));
+        }
+
+        if (string.IsNullOrWhiteSpace(address))
+        {
+            throw new ArgumentException("Address is required", nameof(address));
+        }
+
+        if (address.Length > 200)
+        {
+            throw new ArgumentException("Address cannot exceed 200 characters.", nameof(address));
+        }
+
+        if (cityId <= 0)
+        {
+            throw new ArgumentException("CityId should be positive", nameof(cityId));
+        }
+
+        if (!double.IsFinite(latitude) || latitude is < -90 or > 90)
+        {
+            throw new ArgumentOutOfRangeException(nameof(latitude), "Latitude must be between -90 and 90.");
+        }
+
+        if (!double.IsFinite(longitude) || longitude is < -180 or > 180)
+        {
+            throw new ArgumentOutOfRangeException(nameof(longitude), "Longitude must be between -180 and 180.");
+        }
+
+        if (!Enum.IsDefined(hotelType))
+        {
+            throw new ArgumentOutOfRangeException(nameof(hotelType), "Hotel type is invalid.");
+        }
+
+        if (description?.Length > 2000)
+        {
+            throw new ArgumentException("Description cannot exceed 2000 characters.", nameof(description));
+        }
+
+        if (history?.Length > 4000)
+        {
+            throw new ArgumentException("History cannot exceed 4000 characters.", nameof(history));
+        }
     }
 }

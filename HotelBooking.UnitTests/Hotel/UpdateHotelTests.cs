@@ -18,6 +18,24 @@ public class UpdateHotelTests
         _hotelRepositoryMock = new Mock<IHotelRepository>();
         _cityRepositoryMock = new Mock<ICityRepository>();
 
+        _hotelRepositoryMock
+            .Setup(repository => repository.GetHotelResponseAsync(It.IsAny<int>()))
+            .ReturnsAsync((int hotelId) => new HotelResponseDto
+            {
+                HotelId = hotelId,
+                CityId = 5,
+                CityName = "Nablus",
+                Name = "Updated Hotel",
+                OwnerName = "Updated Owner",
+                Address = "Updated Address",
+                Latitude = 32.2211,
+                Longitude = 35.2544,
+                HotelType = (HotelType)1,
+                Description = "Updated Description",
+                History = "Updated History",
+                IsActive = true
+            });
+
         _service = new UpdateHotel(
             _hotelRepositoryMock.Object,
             _cityRepositoryMock.Object);
@@ -243,6 +261,31 @@ public class UpdateHotelTests
             repository =>
                 repository.GetCityByIdAsync(request.CityId),
             Times.Once);
+    }
+
+    [Fact]
+    public async Task UpdateHotelAsync_WhenSameHotelIdentityExists_ShouldThrowConflictException()
+    {
+        const int hotelId = 10;
+        var request = CreateValidRequest();
+        _hotelRepositoryMock
+            .Setup(repository => repository.GetHotelByIdAsync(hotelId))
+            .ReturnsAsync(CreateHotel(hotelId));
+        _cityRepositoryMock
+            .Setup(repository => repository.GetCityByIdAsync(request.CityId))
+            .ReturnsAsync(CreateCity(request.CityId));
+        _hotelRepositoryMock
+            .Setup(repository => repository.ExistsAsync(
+                request.Name,
+                request.CityId,
+                request.Address,
+                hotelId))
+            .ReturnsAsync(true);
+
+        var action = async () => await _service.UpdateHotelAsync(hotelId, request);
+
+        await Assert.ThrowsAsync<ConflictException>(action);
+        _hotelRepositoryMock.Verify(repository => repository.SaveChangesAsync(), Times.Never);
     }
 
     private static Hotel CreateHotel(int hotelId)

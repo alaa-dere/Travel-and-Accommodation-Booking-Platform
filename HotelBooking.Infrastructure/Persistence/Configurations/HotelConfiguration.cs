@@ -13,5 +13,8 @@ public class HotelConfiguration : IEntityTypeConfiguration<Hotel>
         builder.Property(hotel => hotel.Name).IsRequired().HasMaxLength(50);
         builder.Property(hotel => hotel.OwnerName).IsRequired().HasMaxLength(50);
         builder.Property(hotel => hotel.Address).IsRequired().HasMaxLength(200);
+        builder.Property(hotel => hotel.Description).HasMaxLength(2000);
+        builder.Property(hotel => hotel.History).HasMaxLength(4000);
+        builder.HasIndex(hotel => new { hotel.Name, hotel.CityId, hotel.Address }).IsUnique();
     }
 }

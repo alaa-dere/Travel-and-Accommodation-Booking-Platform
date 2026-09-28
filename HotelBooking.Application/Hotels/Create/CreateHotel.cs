@@ -10,7 +10,7 @@ public class CreateHotel : ICreateHotelService
     private readonly IHotelRepository _hotelRepository;
     private readonly ICityRepository _cityRepository;
 
-    public CreateHotel(IHotelRepository hotelRepository,  ICityRepository cityRepository)
+    public CreateHotel(IHotelRepository hotelRepository, ICityRepository cityRepository)
     {
         _hotelRepository = hotelRepository;
         _cityRepository = cityRepository;
@@ -24,24 +24,26 @@ public class CreateHotel : ICreateHotelService
             throw new NotFoundException("City does not exist");
         }
         
-        var hotel = new Hotel (request.Name, request.OwnerName,request.Address, request.Latitude, request.Longitude, request.HotelType, request.CityId, request.Description,request.History);
+        var hotel = new Hotel(
+            request.Name,
+            request.OwnerName,
+            request.Address,
+            request.Latitude,
+            request.Longitude,
+            request.HotelType,
+            request.CityId,
+            request.Description,
+            request.History);
+
+        if (await _hotelRepository.ExistsAsync(hotel.Name, hotel.CityId, hotel.Address))
+        {
+            throw new ConflictException("A hotel with the same name, city, and address already exists.");
+        }
+
         _hotelRepository.Add(hotel);
         await _hotelRepository.SaveChangesAsync();
-        
-        var response = new HotelResponseDto
-        {
-            HotelId = hotel.HotelId, 
-            CityId =  hotel.CityId, 
-            Name = hotel.Name,  
-            OwnerName = hotel.OwnerName,  
-            HotelType = hotel.HotelType, 
-            Address =  hotel.Address, 
-            Latitude = hotel.Latitude, 
-            Longitude = hotel.Longitude,
-            Description = hotel.Description,
-            History = hotel.History,
-            IsActive = hotel.IsActive
-        };
-        return response;
+
+        return await _hotelRepository.GetHotelResponseAsync(hotel.HotelId)
+               ?? throw new InvalidOperationException("The created hotel could not be retrieved.");
     }
 }

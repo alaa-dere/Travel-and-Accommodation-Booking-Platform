@@ -1,6 +1,9 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace HotelBooking.Application.Hotels.Dtos;
 
 public class ChangeHotelStatusRequest
 {
-    public bool IsActive  { get; set; }
+    [Required]
+    public bool? IsActive { get; set; }
 }

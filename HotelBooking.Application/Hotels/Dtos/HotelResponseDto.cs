@@ -6,6 +6,7 @@ public class HotelResponseDto
 {
     public int HotelId { get; set; }
     public int CityId { get; set; }
+    public string CityName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
     public string OwnerName { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
@@ -15,4 +16,8 @@ public class HotelResponseDto
     public string? Description { get; set; } 
     public string? History { get; set; } 
     public bool IsActive { get; set; }
+    public double? Rating { get; set; }
+    public int RoomsCount { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
 }

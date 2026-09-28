@@ -180,6 +180,28 @@ public class HotelTests
         Assert.Null(hotel.History);
     }
 
+    [Theory]
+    [InlineData(-90.1, 35.0)]
+    [InlineData(90.1, 35.0)]
+    [InlineData(32.0, -180.1)]
+    [InlineData(32.0, 180.1)]
+    public void Constructor_WhenCoordinatesAreOutsideValidRange_ShouldThrowArgumentOutOfRangeException(
+        double latitude,
+        double longitude)
+    {
+        var action = () => CreateValidHotel(latitude: latitude, longitude: longitude);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
+    [Fact]
+    public void Constructor_WhenHotelTypeIsInvalid_ShouldThrowArgumentOutOfRangeException()
+    {
+        var action = () => CreateValidHotel(hotelType: (HotelType)999);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+    }
+
     [Fact]
     public void Constructor_ShouldInitializeCollectionsAsEmpty()
     {
@@ -365,6 +387,19 @@ public class HotelTests
         // Assert
         Assert.Null(hotel.Description);
         Assert.Null(hotel.History);
+    }
+
+    [Fact]
+    public void Update_WhenValidationFails_ShouldNotChangeExistingValues()
+    {
+        var hotel = CreateValidHotel();
+
+        var action = () => UpdateWithValidData(hotel, latitude: 91);
+
+        Assert.Throws<ArgumentOutOfRangeException>(action);
+        Assert.Equal("Test Hotel", hotel.Name);
+        Assert.Equal(32.2211, hotel.Latitude);
+        Assert.Null(hotel.UpdatedAt);
     }
 
     [Fact]

@@ -1,3 +1,5 @@
+using HotelBooking.Application.Common;
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Hotels.Dtos;
 using HotelBooking.Application.Interfaces;
 
@@ -12,23 +14,13 @@ public class GetAllHotels : IGetAllHotelsService
         _hotelRepository = hotelRepository;
     }
 
-    public async Task<IEnumerable<HotelResponseDto>> GetAllHotelsAsync(string? search)
+    public async Task<PagedResult<HotelResponseDto>> GetAllHotelsAsync(HotelListRequestDto request)
     {
-        var hotels = await _hotelRepository.GetHotelsAsync(search);
-        var results = hotels.Select(hotel => new HotelResponseDto()
+        if (request.PageNumber < 1)
         {
-            HotelId = hotel.HotelId,
-            CityId =  hotel.CityId,
-            Name = hotel.Name,
-            OwnerName = hotel.OwnerName,
-            Address = hotel.Address,
-            Latitude =  hotel.Latitude,
-            Longitude =  hotel.Longitude,
-            HotelType = hotel.HotelType,
-            Description = hotel.Description,
-            History = hotel.History,
-            IsActive = hotel.IsActive
-        });
-        return results;
+            throw new BadRequestException("Page number must be greater than zero.");
+        }
+
+        return await _hotelRepository.GetHotelsAsync(request);
     }
 }

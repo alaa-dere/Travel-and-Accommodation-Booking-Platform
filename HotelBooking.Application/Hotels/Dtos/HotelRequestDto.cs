@@ -9,12 +9,15 @@ public class HotelRequestDto
     public int CityId { get; set; }
 
     [Required]
+    [MaxLength(50)]
     public string Name { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(50)]
     public string OwnerName { get; set; } = string.Empty;
 
     [Required]
+    [MaxLength(200)]
     public string Address { get; set; } = string.Empty;
 
     [Range(typeof(double), "-90", "90")]
@@ -25,6 +28,10 @@ public class HotelRequestDto
 
     [EnumDataType(typeof(HotelType))]
     public HotelType HotelType { get; set; }
+
+    [MaxLength(2000)]
     public string? Description { get; set; } 
+
+    [MaxLength(4000)]
     public string? History { get; set; } 
 }

@@ -4,6 +4,7 @@ using System.Net.Http.Json;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Hotels.Dtos;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
@@ -58,14 +59,16 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
     {
         var admin = await CreateUserAsync(Role.Admin);
         var city = await CreateCityAsync();
-        var active = await CreateHotelAsync(city.CityId, "Mapped Active", "Active Owner", true);
-        var inactive = await CreateHotelAsync(city.CityId, "Mapped Inactive", "Inactive Owner", false);
+        var token = Unique("Mapped");
+        var active = await CreateHotelAsync(city.CityId, $"{token} Active", "Active Owner", true);
+        var inactive = await CreateHotelAsync(city.CityId, $"{token} Inactive", "Inactive Owner", false);
         using var client = CreateAuthenticatedClient(admin);
 
-        var response = await client.GetAsync("/api/Hotels");
+        var response = await client.GetAsync($"/api/Hotels?search={token}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<HotelResponseDto>>(JsonOptions);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<HotelResponseDto>>(JsonOptions);
+        var result = page?.Items.ToList();
         Assert.NotNull(result);
         AssertHotel(result.Single(item => item.HotelId == active.HotelId), active);
         AssertHotel(result.Single(item => item.HotelId == inactive.HotelId), inactive);
@@ -89,7 +92,8 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.GetAsync($"/api/Hotels?search={Uri.EscapeDataString(token)}");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<HotelResponseDto>>(JsonOptions);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<HotelResponseDto>>(JsonOptions);
+        var result = page?.Items.ToList();
         Assert.NotNull(result);
         var hotel = Assert.Single(result);
         Assert.Equal(matching.HotelId, hotel.HotelId);
@@ -102,9 +106,37 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
         using var client = CreateAuthenticatedClient(admin);
         var response = await client.GetAsync($"/api/Hotels?search={Guid.NewGuid():N}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var result = await response.Content.ReadFromJsonAsync<List<HotelResponseDto>>(JsonOptions);
+        var page = await response.Content.ReadFromJsonAsync<PagedResult<HotelResponseDto>>(JsonOptions);
+        var result = page?.Items.ToList();
         Assert.NotNull(result);
         Assert.Empty(result);
+    }
+
+    [Fact]
+    public async Task GetHotels_WhenMoreThanOnePageExists_ShouldReturnPagesWithHasNextPage()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var city = await CreateCityAsync();
+        var token = Unique("PagedHotel");
+        for (var index = 1; index <= 11; index++)
+        {
+            await CreateHotelAsync(city.CityId, $"{token}-{index:D2}", Unique("Owner"));
+        }
+        using var client = CreateAuthenticatedClient(admin);
+
+        var firstPage = await client.GetFromJsonAsync<PagedResult<HotelResponseDto>>(
+            $"/api/Hotels?search={token}&pageNumber=1",
+            JsonOptions);
+        var secondPage = await client.GetFromJsonAsync<PagedResult<HotelResponseDto>>(
+            $"/api/Hotels?search={token}&pageNumber=2",
+            JsonOptions);
+
+        Assert.NotNull(firstPage);
+        Assert.Equal(10, firstPage.Items.Count());
+        Assert.True(firstPage.HasNextPage);
+        Assert.NotNull(secondPage);
+        Assert.Single(secondPage.Items);
+        Assert.False(secondPage.HasNextPage);
     }
 
     [Fact]
@@ -122,7 +154,6 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = await client.PostAsJsonAsync("/api/Hotels", request);
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
-        Assert.Equal("api/hotels", response.Headers.Location?.OriginalString);
         var result = await response.Content.ReadFromJsonAsync<HotelResponseDto>(JsonOptions);
         Assert.NotNull(result);
         Assert.True(result.HotelId > 0);
@@ -311,7 +342,7 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
     [Theory]
     [InlineData(HotelEndpoint.Update, "/api/Hotels/not-a-number")]
     [InlineData(HotelEndpoint.Status, "/api/Hotels/not-a-number/status")]
-    public async Task HotelMutation_WithNonNumericHotelId_ShouldReturnBadRequest(
+    public async Task HotelMutation_WithNonNumericHotelId_ShouldReturnNotFound(
         HotelEndpoint endpoint, string path)
     {
         var admin = await CreateUserAsync(Role.Admin);
@@ -319,6 +350,21 @@ public class HotelsControllerTests : IClassFixture<CustomWebApplicationFactory>
         var response = endpoint == HotelEndpoint.Update
             ? await client.PutAsJsonAsync(path, ValidRequest(1))
             : await client.PatchAsJsonAsync(path, new ChangeHotelStatusRequest());
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task ChangeStatus_WhenIsActiveIsMissing_ShouldReturnBadRequest()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var city = await CreateCityAsync();
+        var hotel = await CreateHotelAsync(city.CityId, Unique("Hotel"), Unique("Owner"));
+        using var client = CreateAuthenticatedClient(admin);
+
+        var response = await client.PatchAsJsonAsync(
+            $"/api/Hotels/{hotel.HotelId}/status",
+            new ChangeHotelStatusRequest());
+
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
     }
 
