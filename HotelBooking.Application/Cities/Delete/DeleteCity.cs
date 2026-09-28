@@ -20,14 +20,13 @@ public class DeleteCity : IDeleteCityService
             throw new NotFoundException("City doesn't exist");
         }
         
-       var anyHotels = await _cityRepository.HasHotelsAsync(cityId);
-       if (anyHotels)
-       {
-        throw new ConflictException("City cannot be deleted because it has associated hotels.");
-        
-       }
-       
-       _cityRepository.DeleteCity(city);
-       await _cityRepository.SaveChangesAsync();
+        var hasHotels = await _cityRepository.HasHotelsAsync(cityId);
+        if (hasHotels)
+        {
+            throw new ConflictException("City cannot be deleted because it has associated hotels.");
+        }
+
+        _cityRepository.DeleteCity(city);
+        await _cityRepository.SaveChangesAsync();
     }
 }

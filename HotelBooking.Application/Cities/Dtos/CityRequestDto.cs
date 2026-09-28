@@ -11,6 +11,7 @@ public class CityRequestDto
     [MaxLength(50)]
     public string Country { get; set; }  = string.Empty;
     [Required]
+    [MaxLength(50)]
     public string PostOffice  { get; set; }  = string.Empty;
 
     [MaxLength(500)]

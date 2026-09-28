@@ -20,9 +20,19 @@ public class UpdateCity : IUpdateCityService
         {
             throw new NotFoundException("City doesn't exist");
         }
-        
-        city.Update(request.Name, request.Country, request.PostOffice, request.ThumbnailUrl);
+
+        var normalizedName = request.Name.Trim();
+        var normalizedCountry = request.Country.Trim();
+        var normalizedPostOffice = request.PostOffice.Trim();
+
+        if (await _cityRepository.ExistsAsync(normalizedName, normalizedCountry, normalizedPostOffice, id))
+        {
+            throw new ConflictException("A city with the same name, country, and post office already exists.");
+        }
+
+        city.Update(normalizedName, normalizedCountry, normalizedPostOffice, request.ThumbnailUrl);
         await _cityRepository.SaveChangesAsync();
+        var hotelsCount = await _cityRepository.GetHotelsCountAsync(city.CityId);
         
         var response = new CityResponseDto
         {
@@ -30,7 +40,10 @@ public class UpdateCity : IUpdateCityService
             Name = city.Name,
             Country = city.Country,
             PostOffice = city.PostOffice,
-            ThumbnailUrl = city.ThumbnailUrl
+            ThumbnailUrl = city.ThumbnailUrl,
+            HotelsCount = hotelsCount,
+            CreatedAt = city.CreatedAt,
+            UpdatedAt = city.UpdatedAt
         };
         return response;
     }

@@ -193,6 +193,29 @@ public class UpdateCityTests
     }
 
     [Fact]
+    public async Task UpdateCityAsync_WhenSameCityIdentityExists_ShouldThrowConflictException()
+    {
+        const int cityId = 10;
+        var city = CreateCity(cityId);
+        var request = CreateValidRequest();
+        _cityRepositoryMock
+            .Setup(repository => repository.GetCityByIdAsync(cityId))
+            .ReturnsAsync(city);
+        _cityRepositoryMock
+            .Setup(repository => repository.ExistsAsync(
+                request.Name,
+                request.Country,
+                request.PostOffice,
+                cityId))
+            .ReturnsAsync(true);
+
+        var action = async () => await _service.UpdateCityAsync(cityId, request);
+
+        await Assert.ThrowsAsync<ConflictException>(action);
+        _cityRepositoryMock.Verify(repository => repository.SaveChangesAsync(), Times.Never);
+    }
+
+    [Fact]
     public async Task UpdateCityAsync_ShouldRequestCorrectCityFromRepository()
     {
         // Arrange

@@ -1,6 +1,7 @@
 using HotelBooking.Application.Cities;
+using HotelBooking.Application.Common;
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
-using HotelBooking.Domain.Entities;
 using Moq;
 
 namespace HotelBooking.UnitTests.Cities;
@@ -17,128 +18,57 @@ public class GetAllCitiesTests
     }
 
     [Fact]
-    public async Task GetAllCitiesAsync_WhenNoCitiesExist_ShouldReturnEmptyCollection()
+    public async Task GetAllCitiesAsync_WhenNoCitiesExist_ShouldReturnEmptyPage()
     {
-        // Arrange
-        const string? search = null;
-
+        var request = new CityListRequestDto();
         _cityRepositoryMock
-            .Setup(repository => repository.GetCitiesAsync(search))
-            .ReturnsAsync(new List<City>());
+            .Setup(repository => repository.GetCitiesAsync(request))
+            .ReturnsAsync(new PagedResult<CityResponseDto>
+            {
+                Items = [],
+                PageNumber = 1,
+                HasNextPage = false
+            });
 
-        // Act
-        var result = await _service.GetAllCitiesAsync(search);
+        var result = await _service.GetAllCitiesAsync(request);
 
-        // Assert
-        Assert.Empty(result);
+        Assert.Empty(result.Items);
+        Assert.Equal(1, result.PageNumber);
+        Assert.False(result.HasNextPage);
     }
 
     [Fact]
-    public async Task GetAllCitiesAsync_WhenCityExists_ShouldMapCityCorrectly()
+    public async Task GetAllCitiesAsync_WhenPageExists_ShouldReturnRepositoryResult()
     {
-        // Arrange
-        var city = CreateCity(
-            cityId: 1,
-            name: "Nablus",
-            country: "Palestine",
-            postOffice: "P400");
-
-        _cityRepositoryMock
-            .Setup(repository => repository.GetCitiesAsync(null))
-            .ReturnsAsync(new List<City> { city });
-
-        // Act
-        var result = (await _service.GetAllCitiesAsync(null)).ToList();
-
-        // Assert
-        Assert.Single(result);
-
-        var response = result[0];
-
-        Assert.Equal(city.CityId, response.CityId);
-        Assert.Equal(city.Name, response.Name);
-        Assert.Equal(city.Country, response.Country);
-        Assert.Equal(city.PostOffice, response.PostOffice);
-    }
-
-    [Fact]
-    public async Task GetAllCitiesAsync_WhenMultipleCitiesExist_ShouldReturnAllCities()
-    {
-        // Arrange
-        var cities = new List<City>
+        var request = new CityListRequestDto { Search = "Nablus", PageNumber = 2 };
+        var expected = new PagedResult<CityResponseDto>
         {
-            CreateCity(
-                cityId: 1,
-                name: "Nablus",
-                country: "Palestine",
-                postOffice: "P400"),
-
-            CreateCity(
-                cityId: 2,
-                name: "Ramallah",
-                country: "Palestine",
-                postOffice: "P600")
+            Items = [new CityResponseDto { CityId = 1, Name = "Nablus", HotelsCount = 3 }],
+            PageNumber = 2,
+            HasNextPage = true
         };
-
         _cityRepositoryMock
-            .Setup(repository => repository.GetCitiesAsync(null))
-            .ReturnsAsync(cities);
+            .Setup(repository => repository.GetCitiesAsync(request))
+            .ReturnsAsync(expected);
 
-        // Act
-        var result = (await _service.GetAllCitiesAsync(null)).ToList();
+        var result = await _service.GetAllCitiesAsync(request);
 
-        // Assert
-        Assert.Equal(2, result.Count);
-        Assert.Equal(1, result[0].CityId);
-        Assert.Equal("Nablus", result[0].Name);
-        Assert.Equal(2, result[1].CityId);
-        Assert.Equal("Ramallah", result[1].Name);
+        Assert.Same(expected, result);
+        _cityRepositoryMock.Verify(repository => repository.GetCitiesAsync(request), Times.Once);
     }
 
-    [Fact]
-    public async Task GetAllCitiesAsync_WhenSearchIsProvided_ShouldPassSearchToRepository()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(-1)]
+    public async Task GetAllCitiesAsync_WhenPageNumberIsInvalid_ShouldThrowBadRequestException(int pageNumber)
     {
-        // Arrange
-        const string search = "Nablus";
+        var request = new CityListRequestDto { PageNumber = pageNumber };
 
-        _cityRepositoryMock
-            .Setup(repository => repository.GetCitiesAsync(search))
-            .ReturnsAsync(new List<City>());
+        var action = async () => await _service.GetAllCitiesAsync(request);
 
-        // Act
-        await _service.GetAllCitiesAsync(search);
-
-        // Assert
-        _cityRepositoryMock.Verify(repository => repository.GetCitiesAsync(search), Times.Once);
-    }
-
-    [Fact]
-    public async Task GetAllCitiesAsync_WhenSearchIsNull_ShouldPassNullToRepository()
-    {
-        // Arrange
-        _cityRepositoryMock
-            .Setup(repository => repository.GetCitiesAsync(null))
-            .ReturnsAsync(new List<City>());
-
-        // Act
-        await _service.GetAllCitiesAsync(null);
-
-        // Assert
-        _cityRepositoryMock.Verify(repository => repository.GetCitiesAsync(null), Times.Once);
-    }
-
-    private static City CreateCity(
-        int cityId,
-        string name,
-        string country,
-        string postOffice)
-    {
-        return new City(
-            name: name,
-            country: country,
-            postOffice: postOffice)
-        {
-            CityId = cityId
-        };
+        await Assert.ThrowsAsync<BadRequestException>(action);
+        _cityRepositoryMock.Verify(
+            repository => repository.GetCitiesAsync(It.IsAny<CityListRequestDto>()),
+            Times.Never);
     }
 }

@@ -1,3 +1,5 @@
+using HotelBooking.Application.Common;
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 
 namespace HotelBooking.Application.Cities;
@@ -11,17 +13,13 @@ public class GetAllCities : IGetAllCitiesService
         _cityRepository = cityRepository;
     }
 
-    public async Task<IEnumerable<CityResponseDto>> GetAllCitiesAsync(string? search)
+    public async Task<PagedResult<CityResponseDto>> GetAllCitiesAsync(CityListRequestDto request)
     {
-        var cities = await _cityRepository.GetCitiesAsync(search);
-        var results = cities.Select(city => new CityResponseDto()
+        if (request.PageNumber < 1)
         {
-            CityId =  city.CityId,
-            Name = city.Name,
-            Country =  city.Country,
-            PostOffice = city.PostOffice,
-            ThumbnailUrl = city.ThumbnailUrl
-        });
-        return results;
+            throw new BadRequestException("Page number must be greater than zero.");
+        }
+
+        return await _cityRepository.GetCitiesAsync(request);
     }
 }

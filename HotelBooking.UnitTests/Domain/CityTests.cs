@@ -83,6 +83,16 @@ public class CityTests
     }
 
     [Fact]
+    public void Constructor_ShouldTrimCityIdentityFields()
+    {
+        var city = new City(" Nablus ", " Palestine ", " P400 ");
+
+        Assert.Equal("Nablus", city.Name);
+        Assert.Equal("Palestine", city.Country);
+        Assert.Equal("P400", city.PostOffice);
+    }
+
+    [Fact]
     public void Update_WhenDataIsValid_ShouldUpdateAllFields()
     {
         // Arrange

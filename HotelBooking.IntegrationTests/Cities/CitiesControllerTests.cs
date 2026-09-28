@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using HotelBooking.Application.Cities;
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
 using HotelBooking.IntegrationTests.Infrastructure;
@@ -371,19 +372,50 @@ public class CitiesControllerTests :
         // Assert
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
 
-        var cities =
+        var result =
             await response.Content
-                .ReadFromJsonAsync<List<CityResponseDto>>();
+                .ReadFromJsonAsync<PagedResult<CityResponseDto>>();
 
-        Assert.NotNull(cities);
+        Assert.NotNull(result);
 
         Assert.Contains(
-            cities,
+            result.Items,
             c => c.Name == $"SearchTarget-{unique}");
 
         Assert.DoesNotContain(
-            cities,
+            result.Items,
             c => c.Name == $"OtherCity-{unique}");
+    }
+
+    [Fact]
+    public async Task GetCities_WhenMoreThanOnePageExists_ShouldReturnPagesWithHasNextPage()
+    {
+        var unique = Guid.NewGuid().ToString("N");
+        for (var index = 1; index <= 11; index++)
+        {
+            await CreateCityAsync($"Paged-{unique}-{index:D2}", "Palestine", $"P{index:D2}");
+        }
+
+        var admin = await CreateUserAsync(
+            $"admin_pages_{unique}",
+            $"{unique}@test.com",
+            Role.Admin);
+        using var client = CreateAuthenticatedClient(admin);
+
+        var firstPage = await client.GetFromJsonAsync<PagedResult<CityResponseDto>>(
+            $"/api/Cities?search=Paged-{unique}&pageNumber=1");
+        var secondPage = await client.GetFromJsonAsync<PagedResult<CityResponseDto>>(
+            $"/api/Cities?search=Paged-{unique}&pageNumber=2");
+
+        Assert.NotNull(firstPage);
+        Assert.Equal(10, firstPage.Items.Count());
+        Assert.Equal(1, firstPage.PageNumber);
+        Assert.True(firstPage.HasNextPage);
+
+        Assert.NotNull(secondPage);
+        Assert.Single(secondPage.Items);
+        Assert.Equal(2, secondPage.PageNumber);
+        Assert.False(secondPage.HasNextPage);
     }
 
     private async Task<User> CreateUserAsync(

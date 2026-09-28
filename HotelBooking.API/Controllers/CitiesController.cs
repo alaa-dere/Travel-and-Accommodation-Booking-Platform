@@ -1,5 +1,6 @@
 using HotelBooking.Application.Cities;
 using HotelBooking.Application.Cities.Delete;
+using HotelBooking.Application.Common;
 using HotelBooking.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -8,7 +9,7 @@ namespace HotelBooking.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
-[Authorize(Roles =  "Admin")]
+[Authorize(Roles = "Admin")]
 public class CitiesController : ControllerBase
 {
     private readonly IGetAllCitiesService _getAllCitiesService;
@@ -16,7 +17,8 @@ public class CitiesController : ControllerBase
     private readonly IUpdateCityService _updateCityService;
     private readonly IDeleteCityService _deleteCityService;
 
-    public CitiesController(IGetAllCitiesService getAllCitiesService, ICreateCityService  createCityService, IUpdateCityService  updateCityService, IDeleteCityService  deleteCityService)
+    public CitiesController(
+        IGetAllCitiesService getAllCitiesService, ICreateCityService createCityService, IUpdateCityService updateCityService, IDeleteCityService deleteCityService)
     {
         _getAllCitiesService = getAllCitiesService;
         _createCityService = createCityService;
@@ -25,28 +27,28 @@ public class CitiesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAsync([FromQuery] string? search)
+    public async Task<ActionResult<PagedResult<CityResponseDto>>> GetCitiesAsync([FromQuery] CityListRequestDto request)
     {
-        var cities = await _getAllCitiesService.GetAllCitiesAsync(search);
+        var cities = await _getAllCitiesService.GetAllCitiesAsync(request);
         return Ok(cities);
     }
 
     [HttpPost]
-    public async Task<IActionResult> PostAsync(CityRequestDto request)
+    public async Task<ActionResult<CityResponseDto>> CreateCityAsync(CityRequestDto request)
     {
         var city = await _createCityService.CreateCityAsync(request);
-        return Created("api/cities", city);
+        return StatusCode(StatusCodes.Status201Created, city);
     }
 
     [HttpPut("{cityId:int}")]
-    public async Task<IActionResult> PutAsync(int cityId, CityRequestDto request)
+    public async Task<ActionResult<CityResponseDto>> UpdateCityAsync(int cityId, CityRequestDto request)
     {
         var city = await _updateCityService.UpdateCityAsync(cityId, request);
         return Ok(city);
     }
     
     [HttpDelete("{cityId:int}")]
-    public async Task<IActionResult> DeleteAsync(int cityId)
+    public async Task<IActionResult> DeleteCityAsync(int cityId)
     { 
         await _deleteCityService.DeleteCityAsync(cityId);
         return NoContent();

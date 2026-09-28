@@ -23,9 +23,14 @@ public class City
             throw new ArgumentException("City country is required", nameof(country));
         }
 
-        Name = name;
-        Country = country;
-        PostOffice = postOffice;
+        if (string.IsNullOrWhiteSpace(postOffice))
+        {
+            throw new ArgumentException("City post office is required", nameof(postOffice));
+        }
+
+        Name = name.Trim();
+        Country = country.Trim();
+        PostOffice = postOffice.Trim();
         ThumbnailUrl = ValidateThumbnailUrl(thumbnailUrl);
         CreatedAt = DateTime.UtcNow;
     }
@@ -42,9 +47,14 @@ public class City
             throw new ArgumentException("City country is required", nameof(country));
         }
 
-        Name = name;
-        Country = country;
-        PostOffice = postOffice;
+        if (string.IsNullOrWhiteSpace(postOffice))
+        {
+            throw new ArgumentException("City post office is required", nameof(postOffice));
+        }
+
+        Name = name.Trim();
+        Country = country.Trim();
+        PostOffice = postOffice.Trim();
         ThumbnailUrl = ValidateThumbnailUrl(thumbnailUrl);
         UpdatedAt = DateTime.UtcNow;
     }

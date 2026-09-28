@@ -1,4 +1,5 @@
 using HotelBooking.Application.Cities;
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
 using Moq;
@@ -69,6 +70,25 @@ public class CreateCityTests
         Assert.Equal(request.Name, result.Name);
         Assert.Equal(request.Country, result.Country);
         Assert.Equal(request.PostOffice, result.PostOffice);
+    }
+
+    [Fact]
+    public async Task CreateCityAsync_WhenSameCityIdentityExists_ShouldThrowConflictException()
+    {
+        var request = CreateValidRequest();
+        _cityRepositoryMock
+            .Setup(repository => repository.ExistsAsync(
+                request.Name,
+                request.Country,
+                request.PostOffice,
+                null))
+            .ReturnsAsync(true);
+
+        var action = async () => await _service.CreateCityAsync(request);
+
+        await Assert.ThrowsAsync<ConflictException>(action);
+        _cityRepositoryMock.Verify(repository => repository.Add(It.IsAny<City>()), Times.Never);
+        _cityRepositoryMock.Verify(repository => repository.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
