@@ -7,6 +7,7 @@ namespace HotelBooking.UnitTests.RecentlyVisitedHotels;
 
 public class RecordHotelVisitServiceTests
 {
+    private static readonly DateTimeOffset UtcNow = new(2030, 1, 15, 10, 30, 0, TimeSpan.Zero);
     private readonly Mock<IRecentlyVisitedHotelRepository> _repositoryMock;
     private readonly RecordHotelVisitService _service;
 
@@ -15,7 +16,8 @@ public class RecordHotelVisitServiceTests
         _repositoryMock = new Mock<IRecentlyVisitedHotelRepository>();
 
         _service = new RecordHotelVisitService(
-            _repositoryMock.Object);
+            _repositoryMock.Object,
+            new FixedTimeProvider(UtcNow));
     }
 
     [Fact]
@@ -25,7 +27,7 @@ public class RecordHotelVisitServiceTests
         const int userId = 10;
         const int hotelId = 20;
 
-        var oldVisitedAt = DateTime.UtcNow.AddDays(-5);
+        var oldVisitedAt = UtcNow.UtcDateTime.AddDays(-5);
 
         var existingVisit = new RecentlyVisitedHotel
         {
@@ -39,17 +41,11 @@ public class RecordHotelVisitServiceTests
                 repository.GetVisitAsync(userId, hotelId))
             .ReturnsAsync(existingVisit);
 
-        var beforeCall = DateTime.UtcNow;
-
         // Act
         await _service.RecordVisitAsync(userId, hotelId);
 
-        var afterCall = DateTime.UtcNow;
-
         // Assert
-        Assert.True(existingVisit.VisitedAt >= beforeCall);
-        Assert.True(existingVisit.VisitedAt <= afterCall);
-        Assert.True(existingVisit.VisitedAt > oldVisitedAt);
+        Assert.Equal(UtcNow.UtcDateTime, existingVisit.VisitedAt);
     }
 
     [Fact]
@@ -63,7 +59,7 @@ public class RecordHotelVisitServiceTests
         {
             UserId = userId,
             HotelId = hotelId,
-            VisitedAt = DateTime.UtcNow.AddDays(-1)
+            VisitedAt = UtcNow.UtcDateTime.AddDays(-1)
         };
 
         _repositoryMock
@@ -102,12 +98,8 @@ public class RecordHotelVisitServiceTests
             .Callback<RecentlyVisitedHotel>(visit =>
                 addedVisit = visit);
 
-        var beforeCall = DateTime.UtcNow;
-
         // Act
         await _service.RecordVisitAsync(userId, hotelId);
-
-        var afterCall = DateTime.UtcNow;
 
         // Assert
         Assert.NotNull(addedVisit);
@@ -115,8 +107,7 @@ public class RecordHotelVisitServiceTests
         Assert.Equal(userId, addedVisit!.UserId);
         Assert.Equal(hotelId, addedVisit.HotelId);
 
-        Assert.True(addedVisit.VisitedAt >= beforeCall);
-        Assert.True(addedVisit.VisitedAt <= afterCall);
+        Assert.Equal(UtcNow.UtcDateTime, addedVisit.VisitedAt);
     }
 
     [Fact]
@@ -154,7 +145,7 @@ public class RecordHotelVisitServiceTests
         {
             UserId = userId,
             HotelId = hotelId,
-            VisitedAt = DateTime.UtcNow.AddDays(-1)
+            VisitedAt = UtcNow.UtcDateTime.AddDays(-1)
         };
 
         _repositoryMock
@@ -212,5 +203,10 @@ public class RecordHotelVisitServiceTests
             repository =>
                 repository.GetVisitAsync(userId, hotelId),
             Times.Once);
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

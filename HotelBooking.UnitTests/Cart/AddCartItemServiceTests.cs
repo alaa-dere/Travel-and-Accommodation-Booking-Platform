@@ -1,3 +1,4 @@
+using HotelBooking.Application.AvailableRooms;
 using HotelBooking.Application.AvailableRooms.Dtos;
 using HotelBooking.Application.Cart.Create;
 using HotelBooking.Application.Cart.Dtos;
@@ -135,10 +136,11 @@ public class AddCartItemServiceTests
         _availableRoomRepositoryMock
             .Setup(repository => repository.GetAvailableRoomAsync(
                 request.RoomId,
-                request.CheckIn,
-                request.CheckOut,
-                request.Adults,
-                request.Children))
+                It.Is<RoomAvailabilityCriteria>(criteria =>
+                    criteria.CheckIn == request.CheckIn &&
+                    criteria.CheckOut == request.CheckOut &&
+                    criteria.Adults == request.Adults &&
+                    criteria.Children == request.Children)))
             .ReturnsAsync((AvailableRoomResponseDto?)null);
 
         // Act
@@ -151,10 +153,11 @@ public class AddCartItemServiceTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomAsync(
                 request.RoomId,
-                request.CheckIn,
-                request.CheckOut,
-                request.Adults,
-                request.Children),
+                It.Is<RoomAvailabilityCriteria>(criteria =>
+                    criteria.CheckIn == request.CheckIn &&
+                    criteria.CheckOut == request.CheckOut &&
+                    criteria.Adults == request.Adults &&
+                    criteria.Children == request.Children)),
             Times.Once);
 
         VerifyCartWasNeverModified();
@@ -257,10 +260,11 @@ public class AddCartItemServiceTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomAsync(
                 request.RoomId,
-                request.CheckIn,
-                request.CheckOut,
-                request.Adults,
-                request.Children),
+                It.Is<RoomAvailabilityCriteria>(criteria =>
+                    criteria.CheckIn == request.CheckIn &&
+                    criteria.CheckOut == request.CheckOut &&
+                    criteria.Adults == request.Adults &&
+                    criteria.Children == request.Children)),
             Times.Once);
     }
 
@@ -276,10 +280,11 @@ public class AddCartItemServiceTests
         _availableRoomRepositoryMock
             .Setup(repository => repository.GetAvailableRoomAsync(
                 request.RoomId,
-                request.CheckIn,
-                request.CheckOut,
-                request.Adults,
-                request.Children))
+                It.Is<RoomAvailabilityCriteria>(criteria =>
+                    criteria.CheckIn == request.CheckIn &&
+                    criteria.CheckOut == request.CheckOut &&
+                    criteria.Adults == request.Adults &&
+                    criteria.Children == request.Children)))
             .ReturnsAsync(availableRoom);
     }
 
@@ -288,10 +293,7 @@ public class AddCartItemServiceTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomAsync(
                 It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int>(),
-                It.IsAny<int>()),
+                It.IsAny<RoomAvailabilityCriteria>()),
             Times.Never);
     }
 

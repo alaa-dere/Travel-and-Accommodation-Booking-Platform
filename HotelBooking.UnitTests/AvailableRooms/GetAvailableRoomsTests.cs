@@ -8,6 +8,7 @@ namespace HotelBooking.UnitTests.AvailableRooms;
 
 public class GetAvailableRoomsTests
 {
+    private static readonly DateTimeOffset UtcNow = new(2026, 9, 28, 12, 0, 0, TimeSpan.Zero);
     private readonly Mock<IHotelRepository> _hotelRepositoryMock;
     private readonly Mock<IAvailableRoomRepository> _availableRoomRepositoryMock;
     private readonly GetAvailableRooms _service;
@@ -16,7 +17,10 @@ public class GetAvailableRoomsTests
     {
         _hotelRepositoryMock = new Mock<IHotelRepository>();
         _availableRoomRepositoryMock = new Mock<IAvailableRoomRepository>();
-        _service = new GetAvailableRooms(_hotelRepositoryMock.Object, _availableRoomRepositoryMock.Object);
+        _service = new GetAvailableRooms(
+            _hotelRepositoryMock.Object,
+            _availableRoomRepositoryMock.Object,
+            new FixedTimeProvider(UtcNow));
     }
 
     [Fact]
@@ -36,10 +40,7 @@ public class GetAvailableRoomsTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomsAsync(
                 It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int>(),
-                It.IsAny<int>()),
+                It.IsAny<RoomAvailabilityCriteria>()),
             Times.Never);
     }
 
@@ -55,6 +56,19 @@ public class GetAvailableRoomsTests
 
         // Assert
         await Assert.ThrowsAsync<BadRequestException>(action);
+    }
+
+    [Fact]
+    public async Task GetAvailableRoomsAsync_WhenCheckInIsInThePast_ShouldThrowBadRequestException()
+    {
+        var request = CreateValidRequest();
+        request.CheckIn = UtcNow.UtcDateTime.AddDays(-2);
+        request.CheckOut = UtcNow.UtcDateTime.AddDays(-1);
+
+        var action = async () => await _service.GetAvailableRoomsAsync(1, request);
+
+        await Assert.ThrowsAsync<BadRequestException>(action);
+        _hotelRepositoryMock.Verify(repository => repository.IsActiveHotelAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
@@ -75,10 +89,7 @@ public class GetAvailableRoomsTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomsAsync(
                 It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int>(),
-                It.IsAny<int>()),
+                It.IsAny<RoomAvailabilityCriteria>()),
             Times.Never);
     }
 
@@ -115,10 +126,7 @@ public class GetAvailableRoomsTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomsAsync(
                 It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int>(),
-                It.IsAny<int>()),
+                It.IsAny<RoomAvailabilityCriteria>()),
             Times.Never);
     }
 
@@ -140,10 +148,7 @@ public class GetAvailableRoomsTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomsAsync(
                 It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int>(),
-                It.IsAny<int>()),
+                It.IsAny<RoomAvailabilityCriteria>()),
             Times.Never);
     }
 
@@ -160,10 +165,11 @@ public class GetAvailableRoomsTests
             .Setup(repository =>
                 repository.GetAvailableRoomsAsync(
                     hotelId,
-                    request.CheckIn,
-                    request.CheckOut,
-                    request.Adults,
-                    request.Children))
+                    It.Is<RoomAvailabilityCriteria>(criteria =>
+                        criteria.CheckIn == request.CheckIn &&
+                        criteria.CheckOut == request.CheckOut &&
+                        criteria.Adults == request.Adults &&
+                        criteria.Children == request.Children)))
             .ReturnsAsync(expectedRooms);
 
         // Act
@@ -178,10 +184,11 @@ public class GetAvailableRoomsTests
         _availableRoomRepositoryMock.Verify(
             repository => repository.GetAvailableRoomsAsync(
                 hotelId,
-                request.CheckIn,
-                request.CheckOut,
-                request.Adults,
-                request.Children),
+                It.Is<RoomAvailabilityCriteria>(criteria =>
+                    criteria.CheckIn == request.CheckIn &&
+                    criteria.CheckOut == request.CheckOut &&
+                    criteria.Adults == request.Adults &&
+                    criteria.Children == request.Children)),
             Times.Once);
     }
 
@@ -189,10 +196,15 @@ public class GetAvailableRoomsTests
     {
         return new AvailableRoomsRequestDto
         {
-            CheckIn = DateTime.UtcNow.AddDays(2),
-            CheckOut = DateTime.UtcNow.AddDays(4),
+            CheckIn = UtcNow.UtcDateTime.AddDays(2),
+            CheckOut = UtcNow.UtcDateTime.AddDays(4),
             Adults = 2,
             Children = 0
         };
+    }
+
+    private sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => utcNow;
     }
 }

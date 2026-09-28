@@ -1,3 +1,4 @@
+using HotelBooking.Application.AvailableRooms;
 using HotelBooking.Application.AvailableRooms.Dtos;
 using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
@@ -17,98 +18,71 @@ public class AvailableRoomRepository : IAvailableRoomRepository
         _timeProvider = timeProvider;
     }
 
-    public async Task<List<AvailableRoomResponseDto>> GetAvailableRoomsAsync(int hotelId, DateTime checkIn, DateTime checkOut, int adults, int children)
+    public async Task<List<AvailableRoomResponseDto>> GetAvailableRoomsAsync(int hotelId, RoomAvailabilityCriteria criteria)
     {
-        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
+        var rooms = CreateAvailableRoomsQuery(criteria)
+            .Where(room => room.HotelId == hotelId);
 
-        return await _dbContext.Rooms.AsNoTracking()
-            .Where(room => room.HotelId == hotelId && room.IsActive && room.IsOperationallyAvailable &&
-                           room.AdultsCapacity >= adults && room.ChildCapacity >= children &&
-                           !room.Bookings.Any(booking => booking.BookingStatus != BookingStatus.Cancelled &&
-                                                         (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
-                                                         booking.CheckIn < checkOut && booking.CheckOut > checkIn))
-            .Select(room => new AvailableRoomResponseDto
-            {
-                RoomId = room.RoomId,
-                HotelId = room.HotelId,
-                RoomType = room.RoomType,
-                Description = room.Description,
-                AdultsCapacity = room.AdultsCapacity,
-                ChildCapacity = room.ChildCapacity,
-                PricePerNight = room.PricePerNight,
-
-                Images = room.RoomImages
-                    .OrderBy(image => image.DisplayOrder)
-                    .Select(image => new RoomImageResponseDto
-                    {
-                        ImageUrl = image.ImageUrl,
-                        DisplayOrder = image.DisplayOrder
-                    }).ToList()
-            }).ToListAsync();
+        return await SelectAvailableRoom(rooms)
+            .ToListAsync();
     }
-    
-    public async Task<AvailableRoomResponseDto?> GetAvailableRoomAsync(int hotelId,int roomId, DateTime checkIn, DateTime checkOut, int adults, int children)
+
+    public async Task<AvailableRoomResponseDto?> GetAvailableRoomAsync(int hotelId, int roomId, RoomAvailabilityCriteria criteria)
     {
-        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
+        var rooms = CreateAvailableRoomsQuery(criteria)
+            .Where(room => room.HotelId == hotelId && room.RoomId == roomId);
 
-        return await _dbContext.Rooms.AsNoTracking()
-            .Where(room => room.RoomId == roomId && room.IsActive && room.IsOperationallyAvailable && room.HotelId == hotelId &&
-                           room.AdultsCapacity >= adults && room.ChildCapacity >= children && room.Hotel!.IsActive &&
-                           !room.Bookings.Any(booking => booking.BookingStatus != BookingStatus.Cancelled &&
-                                                         (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
-                                                         booking.CheckIn < checkOut && booking.CheckOut > checkIn))
-            .Select(room => new AvailableRoomResponseDto
-            {
-                RoomId = room.RoomId,
-                HotelId = room.HotelId,
-                RoomType = room.RoomType,
-                Description = room.Description,
-                AdultsCapacity = room.AdultsCapacity,
-                ChildCapacity = room.ChildCapacity,
-                PricePerNight = room.PricePerNight,
-
-                Images = room.RoomImages
-                    .OrderBy(image => image.DisplayOrder)
-                    .Select(image => new RoomImageResponseDto
-                    {
-                        ImageUrl = image.ImageUrl,
-                        DisplayOrder = image.DisplayOrder
-                    }).ToList()
-            }).FirstOrDefaultAsync();
+        return await SelectAvailableRoom(rooms)
+            .FirstOrDefaultAsync();
     }
-    
-    public async Task<AvailableRoomResponseDto?> GetAvailableRoomAsync(
-        int roomId,
-        DateTime checkIn,
-        DateTime checkOut,
-        int adults,
-        int children)
+
+    public async Task<AvailableRoomResponseDto?> GetAvailableRoomAsync(int roomId, RoomAvailabilityCriteria criteria)
+    {
+        var rooms = CreateAvailableRoomsQuery(criteria)
+            .Where(room => room.RoomId == roomId);
+
+        return await SelectAvailableRoom(rooms)
+            .FirstOrDefaultAsync();
+    }
+
+    private IQueryable<Room> CreateAvailableRoomsQuery(RoomAvailabilityCriteria criteria)
     {
         var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
 
-        return await _dbContext.Rooms.AsNoTracking()
-            .Where(room => room.RoomId == roomId && room.IsActive && room.IsOperationallyAvailable && 
-                           room.Hotel!.IsActive && room.AdultsCapacity >= adults && room.ChildCapacity >= children &&
-                           !room.Bookings.Any(booking => booking.BookingStatus != BookingStatus.Cancelled &&
-                                                         (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
-                                                         booking.CheckIn < checkOut && booking.CheckOut > checkIn))
-            .Select(room => new AvailableRoomResponseDto
-            {
-                RoomId = room.RoomId,
-                HotelId = room.HotelId,
-                RoomType = room.RoomType,
-                Description = room.Description,
-                AdultsCapacity = room.AdultsCapacity,
-                ChildCapacity = room.ChildCapacity,
-                PricePerNight = room.PricePerNight,
+        return _dbContext.Rooms
+            .AsNoTracking()
+            .Where(room =>
+                room.IsActive &&
+                room.IsOperationallyAvailable &&
+                room.Hotel!.IsActive &&
+                room.AdultsCapacity >= criteria.Adults &&
+                room.ChildCapacity >= criteria.Children &&
+                !room.Bookings.Any(booking =>
+                    booking.BookingStatus != BookingStatus.Cancelled &&
+                    (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
+                    booking.CheckIn < criteria.CheckOut &&
+                    booking.CheckOut > criteria.CheckIn));
+    }
 
-                Images = room.RoomImages
-                    .OrderBy(image => image.DisplayOrder)
-                    .Select(image => new RoomImageResponseDto
-                    {
-                        ImageUrl = image.ImageUrl,
-                        DisplayOrder = image.DisplayOrder
-                    }).ToList()
-            }).FirstOrDefaultAsync();
+    private static IQueryable<AvailableRoomResponseDto> SelectAvailableRoom(IQueryable<Room> rooms)
+    {
+        return rooms.Select(room => new AvailableRoomResponseDto
+        {
+            RoomId = room.RoomId,
+            HotelId = room.HotelId,
+            RoomType = room.RoomType,
+            Description = room.Description,
+            AdultsCapacity = room.AdultsCapacity,
+            ChildCapacity = room.ChildCapacity,
+            PricePerNight = room.PricePerNight,
+            Images = room.RoomImages
+                .OrderBy(image => image.DisplayOrder)
+                .Select(image => new RoomImageResponseDto
+                {
+                    ImageUrl = image.ImageUrl,
+                    DisplayOrder = image.DisplayOrder
+                })
+                .ToList()
+        });
     }
 }

@@ -1,3 +1,4 @@
+using HotelBooking.Application.AvailableRooms;
 using HotelBooking.Application.Cart.Dtos;
 using HotelBooking.Application.Exceptions;
 using HotelBooking.Application.Interfaces;
@@ -38,7 +39,13 @@ public class AddCartItemService : IAddCartItemService
             throw new BadRequestException("Children cannot be negative.");
         }
 
-        var availableRoom = await _availableRoomRepository.GetAvailableRoomAsync(request.RoomId, request.CheckIn, request.CheckOut, request.Adults, request.Children);
+        var criteria = new RoomAvailabilityCriteria(
+            request.CheckIn,
+            request.CheckOut,
+            request.Adults,
+            request.Children);
+
+        var availableRoom = await _availableRoomRepository.GetAvailableRoomAsync(request.RoomId, criteria);
         if (availableRoom == null)
         {
             throw new ConflictException("The room is not available for the selected dates and guest requirements.");

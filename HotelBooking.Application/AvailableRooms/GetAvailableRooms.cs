@@ -8,34 +8,18 @@ public class GetAvailableRooms : IGetAvailableRoomsService
 {
     private readonly IHotelRepository _hotelRepository;
     private readonly IAvailableRoomRepository _availableRoomRepository;
+    private readonly TimeProvider _timeProvider;
 
-    public GetAvailableRooms(IHotelRepository hotelRepository, IAvailableRoomRepository availableRoomRepository)
+    public GetAvailableRooms(IHotelRepository hotelRepository, IAvailableRoomRepository availableRoomRepository, TimeProvider timeProvider)
     {
         _hotelRepository = hotelRepository;
         _availableRoomRepository = availableRoomRepository;
+        _timeProvider = timeProvider;
     }
 
     public async Task<List<AvailableRoomResponseDto>> GetAvailableRoomsAsync(int hotelId, AvailableRoomsRequestDto request)
     {
-        if (request.CheckIn == default || request.CheckOut == default)
-        {
-            throw new BadRequestException("Check-in and check-out dates are required.");
-        }
-
-        if (request.CheckOut <= request.CheckIn)
-        {
-            throw new BadRequestException("Check-out date must be after check-in date.");
-        }
-
-        if (request.Adults <= 0)
-        {
-            throw new BadRequestException("Adults must be greater than zero.");
-        }
-
-        if (request.Children < 0)
-        {
-            throw new BadRequestException("Children cannot be negative.");
-        }
+        AvailableRoomsRequestValidator.Validate(request, _timeProvider.GetUtcNow().UtcDateTime);
 
         var isActive = await _hotelRepository.IsActiveHotelAsync(hotelId);
 
@@ -44,11 +28,7 @@ public class GetAvailableRooms : IGetAvailableRoomsService
             throw new NotFoundException("Hotel not found.");
         }
 
-        return await _availableRoomRepository.GetAvailableRoomsAsync(
-            hotelId,
-            request.CheckIn,
-            request.CheckOut,
-            request.Adults,
-            request.Children);
+        var criteria = new RoomAvailabilityCriteria(request.CheckIn, request.CheckOut, request.Adults, request.Children);
+        return await _availableRoomRepository.GetAvailableRoomsAsync(hotelId, criteria);
     }
 }
