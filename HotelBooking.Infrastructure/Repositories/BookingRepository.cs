@@ -1,0 +1,61 @@
+using HotelBooking.Application.Interfaces;
+using HotelBooking.Domain.Entities;
+using HotelBooking.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
+
+namespace HotelBooking.Infrastructure.Repositories;
+
+public class BookingRepository : IBookingRepository
+{
+    private readonly HotelBookingDbContext _dbContext;
+
+    public BookingRepository(HotelBookingDbContext dbContext)
+    {
+        _dbContext = dbContext;
+    }
+
+    public async Task<bool> HasConflictingBookingAsync(int roomId, DateTime checkIn, DateTime checkOut, DateTime utcNow, int? excludedBookingId = null)
+    {
+        return await _dbContext.Bookings.AsNoTracking()
+            .AnyAsync(booking => booking.RoomId == roomId && booking.BookingStatus != BookingStatus.Cancelled &&
+                                 (booking.BookingStatus != BookingStatus.Pending || booking.PendingExpiresAt > utcNow) &&
+                                 booking.CheckIn < checkOut && booking.CheckOut > checkIn &&
+                                 (!excludedBookingId.HasValue || booking.BookingId != excludedBookingId.Value));
+    }
+    
+    public async Task AddAsync(Booking booking)
+    {
+        await _dbContext.Bookings.AddAsync(booking);
+    }
+
+    public Task<List<Booking>> GetExpiredPendingBookingsAsync(DateTime utcNow, int batchSize)
+    {
+        return _dbContext.Bookings
+            .Include(booking => booking.Invoice)
+                .ThenInclude(invoice => invoice!.Payment)
+            .Where(booking => booking.BookingStatus == BookingStatus.Pending && booking.PendingExpiresAt <= utcNow)
+            .OrderBy(booking => booking.PendingExpiresAt)
+            .Take(batchSize)
+            .ToListAsync();
+    }
+
+    public async Task SaveChangesAsync()
+    {
+        await _dbContext.SaveChangesAsync();
+    }
+    
+    public async Task<Booking?> GetByIdForUserAsync(int bookingId, int userId)
+    {
+        return await _dbContext.Bookings
+            .Include(booking => booking.Invoice)
+                .ThenInclude(invoice => invoice!.Bookings)
+            .Include(booking => booking.Invoice)
+                .ThenInclude(invoice => invoice!.Payment)
+            .FirstOrDefaultAsync(booking => booking.BookingId == bookingId && booking.UserId == userId);
+    }
+
+    public Task<Booking?> GetByProviderRefundIdAsync(string providerRefundId)
+    {
+        return _dbContext.Bookings.SingleOrDefaultAsync(booking => booking.ProviderRefundId == providerRefundId);
+    }
+}

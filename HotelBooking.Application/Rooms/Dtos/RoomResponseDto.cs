@@ -1,0 +1,22 @@
+using HotelBooking.Application.AvailableRooms.Dtos;
+using HotelBooking.Domain.Entities;
+
+namespace HotelBooking.Application.Rooms.Dtos;
+
+public class RoomResponseDto
+{
+   public int RoomId { get; set; }
+   public int HotelId { get; set; }
+   public string HotelName { get; set; } = string.Empty;
+   public string RoomNumber { get; set; }  = string.Empty;
+   public RoomType RoomType { get; set; }
+   public int AdultsCapacity { get; set; }
+   public int ChildCapacity { get; set; }
+   public decimal PricePerNight { get; set; }
+   public bool IsOperationallyAvailable { get; set; }
+   public bool IsActive { get; set; }
+   public string? Description { get; set; }
+   public DateTime CreatedAt { get; set; }
+   public DateTime? UpdatedAt { get; set; }
+   public List<RoomImageResponseDto> Images { get; set; } = new();
+}

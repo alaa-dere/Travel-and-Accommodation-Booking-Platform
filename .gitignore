@@ -482,3 +482,10 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+coverage-report/
+# Test coverage reports
+**/CoverageReport/
+**/TestResults/
+
+# Docker environment secrets
+.env

@@ -1,0 +1,106 @@
+namespace HotelBooking.Domain.Entities;
+
+public class Room
+{
+    public int RoomId { get; set; }
+    public int HotelId { get; set; }
+    public string RoomNumber { get; set; }
+    public RoomType RoomType { get; set; }
+    public int AdultsCapacity { get; set; }
+    public int ChildCapacity { get; set; }
+    public decimal PricePerNight { get; set; }
+    public string? Description { get; set; }
+    public bool IsOperationallyAvailable { get; set; }
+    public bool IsActive { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public Hotel? Hotel { get; set; }
+    public ICollection<RoomImage> RoomImages { get; set; } = new List<RoomImage>();
+    public ICollection<Booking> Bookings { get; set; } = new List<Booking>();
+    public ICollection<CartItem> CartItems { get; set; } = new List<CartItem>();
+
+    public Room(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId,  string? description)
+    {
+        Validate(roomNumber, roomType, pricePerNight, adultsCapacity, childCapacity, hotelId, description);
+
+        RoomNumber = roomNumber.Trim();
+        RoomType = roomType;
+        PricePerNight = pricePerNight;
+        AdultsCapacity = adultsCapacity;
+        ChildCapacity = childCapacity;
+        IsOperationallyAvailable = true;
+        IsActive = true;
+        CreatedAt = DateTime.UtcNow;
+        HotelId = hotelId;
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+    }
+
+    public void Update(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId, string? description)
+    {
+        Validate(roomNumber, roomType, pricePerNight, adultsCapacity, childCapacity, hotelId, description);
+
+        RoomNumber = roomNumber.Trim();
+        RoomType = roomType;
+        PricePerNight = pricePerNight;
+        AdultsCapacity = adultsCapacity;
+        ChildCapacity = childCapacity;
+        UpdatedAt = DateTime.UtcNow;
+        HotelId = hotelId;
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
+    }
+
+    public void ChangeStatus(bool isActive)
+    {
+        IsActive = isActive;
+        UpdatedAt = DateTime.UtcNow;
+    }
+    
+    public void ChangeOperationalAvailability(bool isOperationallyAvailable)
+    {
+        IsOperationallyAvailable = isOperationallyAvailable;
+        UpdatedAt = DateTime.UtcNow;
+    }
+
+    private static void Validate(string roomNumber, RoomType roomType, decimal pricePerNight, int adultsCapacity, int childCapacity, int hotelId, string? description)
+    {
+        if (string.IsNullOrWhiteSpace(roomNumber))
+        {
+            throw new ArgumentException("Room number cannot be null or empty", nameof(roomNumber));
+        }
+
+        if (roomNumber.Length > 50)
+        {
+            throw new ArgumentException("Room number cannot exceed 50 characters.", nameof(roomNumber));
+        }
+
+        if (!Enum.IsDefined(roomType))
+        {
+            throw new ArgumentOutOfRangeException(nameof(roomType), "Room type is invalid.");
+        }
+
+        if (pricePerNight <= 0)
+        {
+            throw new ArgumentException("Price per night should be positive", nameof(pricePerNight));
+        }
+
+        if (adultsCapacity <= 0)
+        {
+            throw new ArgumentException("adults capacity cannot be negative or Zero", nameof(adultsCapacity));
+        }
+
+        if (childCapacity < 0)
+        {
+            throw new ArgumentException("child capacity cannot be negative", nameof(childCapacity));
+        }
+
+        if (hotelId <= 0)
+        {
+            throw new ArgumentException("Hotel ID should be positive", nameof(hotelId));
+        }
+
+        if (description?.Length > 2000)
+        {
+            throw new ArgumentException("Description cannot exceed 2000 characters.", nameof(description));
+        }
+    }
+}
