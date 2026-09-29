@@ -108,7 +108,7 @@ public class CreateBookingsService : ICreateBookingsService
         }
 
         var payment = await _paymentService.CreatePendingPaymentAsync(invoice);
-        return new PendingCheckout(invoice, rooms, payment, firstRoom.Hotel!.Name);
+        return new PendingCheckout(invoice, rooms, payment, firstRoom.Hotel!.Name, firstRoom.Hotel.Address);
     }
 
     private async Task<Booking> CreateBookingAsync(int userId, CartItem item, PendingBookingWindow pendingWindow, string? specialRequests)
@@ -163,6 +163,7 @@ public class CreateBookingsService : ICreateBookingsService
                 CustomerEmail = customerEmail,
                 InvoiceId = checkout.Invoice.InvoiceId,
                 HotelName = checkout.HotelName,
+                HotelAddress = checkout.HotelAddress,
                 InvoiceTotal = checkout.Invoice.TotalAmount,
                 PaymentStatus = checkout.Payment.Status,
                 Rooms = checkout.Rooms.Select(room => new BookingConfirmationEmailRoomDto
@@ -208,6 +209,7 @@ public class CreateBookingsService : ICreateBookingsService
         ConfirmationId = checkout.Invoice.InvoiceId,
         HotelId = checkout.Invoice.HotelId,
         HotelName = checkout.HotelName,
+        HotelAddress = checkout.HotelAddress,
         TotalAmount = checkout.Invoice.TotalAmount,
         PaymentStatus = checkout.Payment.Status,
         Rooms = checkout.Rooms.Select(room => new BookingConfirmationRoomDto
@@ -251,5 +253,10 @@ public class CreateBookingsService : ICreateBookingsService
         }
     }
 
-    private sealed record PendingCheckout(Invoice Invoice, List<(Booking Booking, string RoomNumber)> Rooms, Payment Payment, string HotelName);
+    private sealed record PendingCheckout(
+        Invoice Invoice,
+        List<(Booking Booking, string RoomNumber)> Rooms,
+        Payment Payment,
+        string HotelName,
+        string HotelAddress);
 }

@@ -37,6 +37,7 @@ public class GetInvoiceForPdfService : IGetInvoiceForPdfService
         {
             InvoiceId = invoice.InvoiceId,
             HotelName = invoice.Hotel?.Name ?? string.Empty,
+            HotelAddress = invoice.Hotel?.Address ?? string.Empty,
             TotalAmount = invoice.TotalAmount,
             PaymentStatus = invoice.Payment?.Status ?? throw new InvalidOperationException("Invoice payment information is missing."),
             CreatedAt = invoice.CreatedAt,
@@ -52,7 +53,11 @@ public class GetInvoiceForPdfService : IGetInvoiceForPdfService
                     OriginalTotalPrice = booking.OriginalTotalPrice,
                     DiscountPercentage = booking.DiscountPercentage,
                     DiscountAmount = booking.DiscountAmount,
-                    TotalPrice = booking.TotalPrice
+                    TotalPrice = booking.TotalPrice,
+                    Status = booking.BookingStatus,
+                    SpecialRequests = booking.SpecialRequests,
+                    RefundedAmount = booking.RefundedAmount,
+                    RefundStatus = booking.RefundStatus
                 }).ToList()
         };
     }

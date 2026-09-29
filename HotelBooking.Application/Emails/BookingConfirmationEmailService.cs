@@ -29,6 +29,7 @@ public class BookingConfirmationEmailService : IBookingConfirmationEmailService
         body.AppendLine("BOOKING CONFIRMATION");
         body.AppendLine("--------------------");
         body.AppendLine($"Hotel: {confirmation.HotelName}");
+        body.AppendLine($"Address: {confirmation.HotelAddress}");
         body.AppendLine();
 
         foreach (var room in confirmation.Rooms)

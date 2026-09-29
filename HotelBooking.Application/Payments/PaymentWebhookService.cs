@@ -225,6 +225,7 @@ public sealed class PaymentWebhookService : IPaymentWebhookService
             CustomerEmail = email,
             InvoiceId = invoice.InvoiceId,
             HotelName = invoice.Hotel?.Name ?? "Hotel",
+            HotelAddress = invoice.Hotel?.Address ?? string.Empty,
             InvoiceTotal = invoice.TotalAmount,
             PaymentStatus = payment.Status,
             Rooms = invoice.Bookings.Select(booking => new BookingConfirmationEmailRoomDto

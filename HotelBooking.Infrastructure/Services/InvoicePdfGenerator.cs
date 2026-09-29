@@ -31,6 +31,9 @@ public class InvoicePdfGenerator : IInvoicePdfGenerator
                             .Text($"Hotel: {invoice.HotelName}");
 
                         column.Item()
+                            .Text($"Address: {invoice.HotelAddress}");
+
+                        column.Item()
                             .Text($"Invoice Date: {invoice.CreatedAt:yyyy-MM-dd}");
 
                         column.Item()
@@ -47,30 +50,45 @@ public class InvoicePdfGenerator : IInvoicePdfGenerator
                                 .Text($"Room: {booking.RoomNumber}");
 
                             column.Item()
+                                .Text($"Booking status: {booking.Status}");
+
+                            column.Item()
                                 .Text($"Check-in: {booking.CheckIn:yyyy-MM-dd}");
 
                             column.Item()
                                 .Text($"Check-out: {booking.CheckOut:yyyy-MM-dd}");
 
                             column.Item()
-                                .Text($"Price per night: {booking.PricePerNight:C}");
+                                .Text($"Price per night: {FormatMoney(booking.PricePerNight)}");
 
                             column.Item()
-                                .Text($"Original price: {booking.OriginalTotalPrice:C}");
+                                .Text($"Original price: {FormatMoney(booking.OriginalTotalPrice)}");
 
                             column.Item()
                                 .Text($"Discount: {booking.DiscountPercentage}%");
 
                             column.Item()
-                                .Text($"Discount amount: {booking.DiscountAmount:C}");
+                                .Text($"Discount amount: {FormatMoney(booking.DiscountAmount)}");
 
                             column.Item()
-                                .Text($"Booking total: {booking.TotalPrice:C}");
+                                .Text($"Booking total: {FormatMoney(booking.TotalPrice)}");
+
+                            if (!string.IsNullOrWhiteSpace(booking.SpecialRequests))
+                            {
+                                column.Item()
+                                    .Text($"Special requests: {booking.SpecialRequests}");
+                            }
+
+                            if (booking.RefundedAmount.HasValue)
+                            {
+                                column.Item()
+                                    .Text($"Refund: {FormatMoney(booking.RefundedAmount.Value)} ({booking.RefundStatus})");
+                            }
                         }
 
                         column.Item()
                             .PaddingTop(20)
-                            .Text($"Invoice Total: {invoice.TotalAmount:C}")
+                            .Text($"Invoice Total: {FormatMoney(invoice.TotalAmount)}")
                             .FontSize(16)
                             .Bold();
                     });
@@ -81,4 +99,6 @@ public class InvoicePdfGenerator : IInvoicePdfGenerator
             });
         }).GeneratePdf();
     }
+
+    private static string FormatMoney(decimal amount) => $"{amount:N2} USD";
 }
