@@ -2,6 +2,10 @@ namespace HotelBooking.Domain.Entities;
 
 public class Promotion
 {
+    private Promotion()
+    {
+    }
+
     public int PromotionId { get; set; }
     public int HotelId { get; set; }
     public int DiscountPercentage { get; set; }
@@ -12,6 +16,11 @@ public class Promotion
     public bool IsActive { get; set; }
 
     public Promotion(int hotelId, int discountPercentage, DateTime startDate, DateTime endDate)
+        : this(hotelId, discountPercentage, startDate, endDate, DateTime.UtcNow)
+    {
+    }
+
+    public Promotion(int hotelId, int discountPercentage, DateTime startDate, DateTime endDate, DateTime createdAt)
     {
         if (hotelId <= 0)
         {
@@ -27,12 +36,12 @@ public class Promotion
         {
             throw new ArgumentException("Promotion end date must be greater than start date");
         }
-        
+
         HotelId = hotelId;
         DiscountPercentage = discountPercentage;
-        StartDate = startDate;
-        EndDate = endDate;
-        CreatedAt = DateTime.UtcNow;
+        StartDate = NormalizeUtc(startDate);
+        EndDate = NormalizeUtc(endDate);
+        CreatedAt = NormalizeUtc(createdAt);
         IsActive = true;
     }
     
@@ -45,4 +54,11 @@ public class Promotion
     {
         IsActive = false;
     }
+
+    private static DateTime NormalizeUtc(DateTime value) => value.Kind switch
+    {
+        DateTimeKind.Utc => value,
+        DateTimeKind.Local => value.ToUniversalTime(),
+        _ => DateTime.SpecifyKind(value, DateTimeKind.Utc)
+    };
 }

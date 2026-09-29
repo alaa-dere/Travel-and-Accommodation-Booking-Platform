@@ -17,7 +17,10 @@ public class PromotionRepository : IPromotionRepository
     public async Task<Promotion?> GetActivePromotionForHotelAsync(int hotelId, DateTime bookingCreationTime)
     {
         return await _dbContext.Promotions.AsNoTracking()
-            .Where(promotion => promotion.HotelId == hotelId && promotion.IsActive && promotion.StartDate <= bookingCreationTime && promotion.EndDate >= bookingCreationTime)
+            .Where(promotion =>
+                promotion.HotelId == hotelId && promotion.IsActive &&
+                promotion.StartDate <= bookingCreationTime &&
+                bookingCreationTime < promotion.EndDate)
             .OrderByDescending(promotion => promotion.DiscountPercentage)
             .FirstOrDefaultAsync();
     }
@@ -35,5 +38,15 @@ public class PromotionRepository : IPromotionRepository
     public async Task<Promotion?> GetByIdAsync(int promotionId)
     {
         return await _dbContext.Promotions.FirstOrDefaultAsync(promotion => promotion.PromotionId == promotionId);
+    }
+
+    public Task<bool> HasOverlappingActivePromotionAsync(int hotelId, DateTime startDate, DateTime endDate, int? excludedPromotionId = null)
+    {
+        return _dbContext.Promotions.AsNoTracking().AnyAsync(promotion =>
+            promotion.HotelId == hotelId &&
+            promotion.IsActive &&
+            promotion.StartDate < endDate &&
+            promotion.EndDate > startDate &&
+            (!excludedPromotionId.HasValue || promotion.PromotionId != excludedPromotionId.Value));
     }
 }

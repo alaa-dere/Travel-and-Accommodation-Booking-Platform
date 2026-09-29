@@ -30,7 +30,7 @@ public class GetFeaturedDealsService : IFeaturedDealsService
             Rating = deal.AverageRating,
             OriginalPrice = deal.StartingPrice,
             DiscountPercentage = deal.DiscountPercentage,
-            DiscountedPrice = deal.StartingPrice - (deal.StartingPrice * deal.DiscountPercentage / 100m)
+            DiscountedPrice = decimal.Round(deal.StartingPrice - (deal.StartingPrice * deal.DiscountPercentage / 100m), 2, MidpointRounding.AwayFromZero)
         });
     }
 }

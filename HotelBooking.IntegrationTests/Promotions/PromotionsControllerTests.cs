@@ -151,7 +151,7 @@ public class PromotionsControllerTests : IClassFixture<CustomWebApplicationFacto
     }
 
     [Fact]
-    public async Task CreatePromotion_ShouldAllowMultiplePromotionsForSameHotel()
+    public async Task CreatePromotion_WhenPeriodOverlaps_ShouldReturnConflict()
     {
         var admin = await CreateUserAsync(Role.Admin);
         var hotel = await CreateHotelAsync();
@@ -162,12 +162,29 @@ public class PromotionsControllerTests : IClassFixture<CustomWebApplicationFacto
 
         Assert.Equal(HttpStatusCode.Created,
             (await client.PostAsJsonAsync("/api/promotions", first)).StatusCode);
-        Assert.Equal(HttpStatusCode.Created,
+        Assert.Equal(HttpStatusCode.Conflict,
             (await client.PostAsJsonAsync("/api/promotions", second)).StatusCode);
 
         using var scope = _factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
-        Assert.Equal(2, await db.Promotions.CountAsync(item => item.HotelId == hotel.HotelId));
+        Assert.Equal(1, await db.Promotions.CountAsync(item => item.HotelId == hotel.HotelId));
+    }
+
+    [Fact]
+    public async Task CreatePromotion_WhenPeriodsDoNotOverlap_ShouldSucceed()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var hotel = await CreateHotelAsync();
+        using var client = CreateAuthenticatedClient(admin);
+        var first = ValidRequest(hotel.HotelId);
+        var second = ValidRequest(hotel.HotelId);
+        second.StartDate = first.EndDate;
+        second.EndDate = second.StartDate.AddDays(5);
+
+        Assert.Equal(HttpStatusCode.Created,
+            (await client.PostAsJsonAsync("/api/promotions", first)).StatusCode);
+        Assert.Equal(HttpStatusCode.Created,
+            (await client.PostAsJsonAsync("/api/promotions", second)).StatusCode);
     }
 
     [Theory]

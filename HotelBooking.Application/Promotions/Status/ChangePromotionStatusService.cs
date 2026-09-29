@@ -27,6 +27,10 @@ public class ChangePromotionStatusService : IChangePromotionStatusService
 
         if (isActive)
         {
+            if (await _promotionRepository.HasOverlappingActivePromotionAsync(promotion.HotelId, promotion.StartDate, promotion.EndDate, promotion.PromotionId))
+            {
+                throw new ConflictException("The hotel already has an active promotion during this period.");
+            }
             promotion.Activate();
         }
         else

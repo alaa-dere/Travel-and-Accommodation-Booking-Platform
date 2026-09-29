@@ -32,7 +32,7 @@ public class BookingPricingService : IBookingPricingService
         var originalTotalPrice = pricePerNight * numberOfNights;
         var promotion = await _promotionRepository.GetActivePromotionForHotelAsync(room.HotelId, bookingCreationTime);
         var discountPercentage = promotion?.DiscountPercentage ?? 0;
-        var discountAmount = originalTotalPrice * discountPercentage / 100m;
+        var discountAmount = decimal.Round(originalTotalPrice * discountPercentage / 100m, 2, MidpointRounding.AwayFromZero);
         var totalPrice = originalTotalPrice - discountAmount;
 
         return new BookingPriceResultDto

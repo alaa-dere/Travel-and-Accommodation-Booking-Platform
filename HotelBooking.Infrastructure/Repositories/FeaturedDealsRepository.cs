@@ -19,7 +19,7 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
     {
         var query = _dbContext.Hotels.AsNoTracking()
             .Where(hotel => hotel.IsActive)
-            .Where(hotel => hotel.Promotions.Any(promotion => promotion.IsActive && promotion.StartDate <= now && promotion.EndDate >= now))
+            .Where(hotel => hotel.Promotions.Any(promotion => promotion.IsActive && promotion.StartDate <= now && now < promotion.EndDate))
             .Where(hotel => hotel.Rooms.Any(room => room.IsActive && room.IsOperationallyAvailable))
             .Select(hotel => new FeaturedDealData
             {
@@ -33,7 +33,7 @@ public class FeaturedDealsRepository : IFeaturedDealsRepository
                     .Min(room => (double)room.PricePerNight),
 
                 DiscountPercentage = hotel.Promotions
-                    .Where(promotion => promotion.IsActive && promotion.StartDate <= now && promotion.EndDate >= now)
+                    .Where(promotion => promotion.IsActive && promotion.StartDate <= now && now < promotion.EndDate)
                     .OrderByDescending(promotion => promotion.DiscountPercentage)
                     .Select(promotion => promotion.DiscountPercentage)
                     .First(),

@@ -8,11 +8,18 @@ public class CreatePromotionService : ICreatePromotionService
 {
     private readonly IPromotionRepository _promotionRepository;
     private readonly IHotelRepository _hotelRepository;
+    private readonly TimeProvider _timeProvider;
 
-    public CreatePromotionService(IPromotionRepository promotionRepository, IHotelRepository hotelRepository)
+    public CreatePromotionService(IPromotionRepository promotionRepository, IHotelRepository hotelRepository, TimeProvider timeProvider)
     {
         _promotionRepository = promotionRepository;
         _hotelRepository = hotelRepository;
+        _timeProvider = timeProvider;
+    }
+
+    public CreatePromotionService(IPromotionRepository promotionRepository, IHotelRepository hotelRepository)
+        : this(promotionRepository, hotelRepository, TimeProvider.System)
+    {
     }
 
     public async Task CreateAsync(CreatePromotionRequestDto request)
@@ -39,7 +46,20 @@ public class CreatePromotionService : ICreatePromotionService
             throw new NotFoundException("Hotel not found.");
         }
 
-        var promotion = new Promotion(request.HotelId, request.DiscountPercentage, request.StartDate, request.EndDate);
+        if (await _promotionRepository.HasOverlappingActivePromotionAsync(
+                request.HotelId,
+                request.StartDate,
+                request.EndDate))
+        {
+            throw new ConflictException("The hotel already has an active promotion during this period.");
+        }
+
+        var promotion = new Promotion(
+            request.HotelId,
+            request.DiscountPercentage,
+            request.StartDate,
+            request.EndDate,
+            _timeProvider.GetUtcNow().UtcDateTime);
 
         await _promotionRepository.AddAsync(promotion);
         await _promotionRepository.SaveChangesAsync();
