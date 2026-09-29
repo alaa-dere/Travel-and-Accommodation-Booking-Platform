@@ -41,7 +41,10 @@ public class RecentlyVisitedHotelRepository : IRecentlyVisitedHotelRepository
                 HotelId = visit.HotelId,
                 Name = visit.Hotel!.Name,
                 City = visit.Hotel.City.Name,
-                
+                ThumbnailUrl = visit.Hotel.HotelImages
+                    .OrderBy(image => image.DisplayOrder)
+                    .Select(image => image.ImageUrl)
+                    .FirstOrDefault(),
                 Rating = visit.Hotel.Rooms
                     .SelectMany(room => room.Bookings)
                     .Where(booking => booking.BookingStatus == BookingStatus.Completed && booking.Review != null)

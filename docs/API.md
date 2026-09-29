@@ -350,8 +350,8 @@ Success: `200 OK` with up to five deal objects containing `hotelId`,
 `GET /api/hotels/recently-visited` — Customer
 
 Success: `200 OK` with up to five newest active hotels visited by the customer.
-Each item contains `hotelId`, `name`, `city`, nullable `rating`, and nullable
-`startingPricePerNight`.
+Each item contains `hotelId`, `name`, `city`, nullable `thumbnailUrl`, nullable
+`rating`, and nullable `startingPricePerNight`.
 
 ### Get trending destinations
 

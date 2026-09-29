@@ -55,6 +55,8 @@ public class RecentlyVisitedHotelsControllerTests : IClassFixture<CustomWebAppli
         var otherCustomer = await CreateUserAsync(Role.Customer);
         var ownHotel = await CreateHotelAsync("Own City");
         var otherHotel = await CreateHotelAsync("Other City");
+        await CreateHotelImageAsync(ownHotel.HotelId, "https://example.com/secondary.jpg", 2);
+        await CreateHotelImageAsync(ownHotel.HotelId, "https://example.com/thumbnail.jpg", 1);
         await CreateVisitAsync(customer.UserId, ownHotel.HotelId, DateTime.UtcNow.AddDays(-1));
         await CreateVisitAsync(otherCustomer.UserId, otherHotel.HotelId, DateTime.UtcNow);
         using var client = CreateAuthenticatedClient(customer);
@@ -68,6 +70,7 @@ public class RecentlyVisitedHotelsControllerTests : IClassFixture<CustomWebAppli
         Assert.Equal(ownHotel.HotelId, hotel.HotelId);
         Assert.Equal(ownHotel.Name, hotel.Name);
         Assert.Equal("Own City", hotel.City);
+        Assert.Equal("https://example.com/thumbnail.jpg", hotel.ThumbnailUrl);
     }
 
     [Fact]
@@ -248,6 +251,14 @@ public class RecentlyVisitedHotelsControllerTests : IClassFixture<CustomWebAppli
         db.RecentlyVisitedHotels.Add(visit);
         await db.SaveChangesAsync();
         return visit;
+    }
+
+    private async Task CreateHotelImageAsync(int hotelId, string imageUrl, int displayOrder)
+    {
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
+        db.HotelImages.Add(new HotelImage(imageUrl, displayOrder, hotelId));
+        await db.SaveChangesAsync();
     }
 
     private async Task<Booking> CreateBookingAsync(
