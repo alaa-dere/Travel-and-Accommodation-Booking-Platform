@@ -70,6 +70,12 @@ PDF download. Important status codes are:
 | `403 Forbidden` | The authenticated role is not allowed. |
 | `404 Not Found` | The requested entity was not found or is not owned by the customer. |
 | `409 Conflict` | Current state prevents the operation. |
+| `429 Too Many Requests` | The endpoint's request limit was exceeded. |
+
+Registration and login are limited to 10 requests per minute per client IP.
+The Stripe webhook is limited to 120 requests per minute per client IP. These
+limits reduce brute-force and traffic-abuse risk and are disabled only in the
+automated `Testing` environment.
 
 Application-generated errors use this shape:
 
@@ -90,7 +96,7 @@ response containing an `errors` object keyed by field name.
 | `POST` | `/api/Auth/login` | Public | `200` |
 | `GET` | `/api/hotels/{hotelId}/available-rooms` | Customer | `200` |
 | `POST` | `/api/hotels/{hotelId}/available-rooms/{roomId}/selection` | Customer | `200` |
-| `PUT` | `/api/bookings/{bookingId}` | Customer | `204` |
+| `PATCH` | `/api/bookings/{bookingId}` | Customer | `204` |
 | `DELETE` | `/api/bookings/{bookingId}` | Customer | `204` |
 | `POST` | `/api/cart/items` | Customer | `204` |
 | `GET` | `/api/cart` | Customer | `200` |
@@ -103,6 +109,8 @@ response containing an `errors` object keyed by field name.
 | `GET` | `/api/FeaturedDeals` | Customer | `200` |
 | `GET` | `/api/hotels/{hotelId}` | Customer | `200` |
 | `GET` | `/api/hotels/{hotelId}/images` | Customer | `200` |
+| `POST` | `/api/hotels/{hotelId}/images` | Admin | `204` |
+| `DELETE` | `/api/hotels/{hotelId}/images/{imageId}` | Admin | `204` |
 | `GET` | `/api/hotels/{hotelId}/location` | Customer | `200` |
 | `GET` | `/api/hotels/{hotelId}/reviews` | Customer | `200` |
 | `POST` | `/api/hotels/{hotelId}/reviews` | Customer | `204` |
@@ -262,10 +270,12 @@ Important errors: `404` when the hotel does not exist.
 
 ### Get hotel reviews
 
-`GET /api/hotels/{hotelId}/reviews` — Customer
+`GET /api/hotels/{hotelId}/reviews?pageNumber=1` — Customer
 
-Success: `200 OK` with nullable average `rating` and a `reviews` array. Each
-review contains `rating`, `comment`, and `createdAt`.
+`pageNumber` defaults to `1`; each page contains at most 10 reviews. Success:
+`200 OK` with the hotel's nullable average `rating`, a `reviews` array,
+`pageNumber`, and `hasNextPage`. Each review contains `rating`, `comment`, and
+`createdAt`.
 
 Important errors: `404` when the hotel does not exist.
 
@@ -442,31 +452,28 @@ authentication-required PaymentIntent states. Invalid signatures return
 
 ### Modify a booking
 
-`PUT /api/bookings/{bookingId}` — Customer
+`PATCH /api/bookings/{bookingId}` — Customer
 
 Request body:
 
 ```json
 {
-  "roomId": 21,
-  "checkIn": "2030-07-01T00:00:00Z",
-  "checkOut": "2030-07-04T00:00:00Z",
   "adults": 2,
   "children": 0,
   "specialRequests": "Quiet room"
 }
 ```
 
-The room ID must be positive, checkout must follow check-in, at least one adult
-is required, children cannot be negative, and special requests are limited to
-1000 characters. A replacement room must belong to the same hotel and fit the
-guest counts.
+After checkout, the room and stay dates are fixed. This endpoint only updates
+guest counts and special requests. At least one adult is required, children
+cannot be negative, special requests are limited to 1000 characters, and the
+existing room must fit the new guest counts.
 
 Success: `204 No Content`.
 
-Important errors: `400` for invalid request/capacity; `404` when the booking or
-room is unavailable to the customer; `409` when the stay has started, booking is
-cancelled, or the requested room/dates are unavailable.
+Important errors: `400` for invalid request/capacity; `404` when the booking is
+not available to the customer; `409` when the stay has started or the booking
+is cancelled.
 
 ### Cancel a booking
 
@@ -474,8 +481,14 @@ cancelled, or the requested room/dates are unavailable.
 
 Success: `204 No Content`.
 
+Cancelling one paid booking requests a refund for that booking's total rather
+than refunding unrelated bookings on the same invoice. A booking whose payment
+is still being processed cannot be cancelled.
+
 Important errors: `404` when the booking does not exist or is not owned by the
-customer; `409` when it is already cancelled or its stay has started.
+customer; `409` when it is already cancelled, its stay has started, or its
+payment is still being processed; `503` when the payment provider cannot accept
+the refund.
 
 ### Download an invoice
 
@@ -591,6 +604,33 @@ city does not exist.
 
 Success: `204 No Content`. Important errors: `404` when the hotel does not exist.
 
+### Add a hotel image
+
+`POST /api/hotels/{hotelId}/images`
+
+```json
+{
+  "imageUrl": "https://example.com/hotel.jpg",
+  "displayOrder": 1
+}
+```
+
+The URL is required and limited to 500 characters; display order must be
+positive. A hotel cannot contain duplicate image URLs or display positions.
+Success: `204 No Content`.
+
+Important errors: `400` for invalid fields; `404` when the hotel does not
+exist; `409` for a duplicate URL or display order.
+
+### Delete a hotel image
+
+`DELETE /api/hotels/{hotelId}/images/{imageId}`
+
+Success: `204 No Content`.
+
+Important errors: `404` when the hotel/image does not exist or the image does
+not belong to the specified hotel.
+
 ## Room administration
 
 All room endpoints require the **Admin** role.
@@ -700,7 +740,10 @@ All promotion endpoints require the **Admin** role.
 Hotel ID must be positive, discount must be `1`–`99`, and end date must be after
 start date. Success: `201 Created` with no body.
 
-Important errors: `400` for invalid data; `404` when the hotel does not exist.
+Promotion periods use a start-inclusive, end-exclusive interval. Adjacent
+periods are allowed, but overlapping active promotions for the same hotel are
+rejected. Important errors: `400` for invalid data; `404` when the hotel does
+not exist; `409` when the active period overlaps another promotion.
 
 ### Change promotion status
 
