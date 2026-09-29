@@ -2,11 +2,13 @@ using HotelBooking.Application.Authentication.Login;
 using HotelBooking.Application.Authentication.Register;
 using HotelBooking.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HotelBooking.API.Controllers;
 
 [ApiController]
 [Route("api/[controller]")]
+[EnableRateLimiting("authentication")]
 public class AuthController : ControllerBase
 {
     private readonly IRegisterService _registerService;

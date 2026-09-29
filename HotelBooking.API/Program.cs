@@ -13,6 +13,7 @@ using HotelBooking.Infrastructure.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Threading.RateLimiting;
 using HotelBooking.Application;
 using HotelBooking.Application.AvailableRooms;
 using HotelBooking.Application.Bookings;
@@ -151,6 +152,31 @@ builder.Services
         };
     });
 builder.Services.AddAuthorization();
+var isTesting = builder.Environment.IsEnvironment("Testing");
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("authentication", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = isTesting ? int.MaxValue : 10,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+    options.AddPolicy("stripe-webhook", httpContext =>
+        RateLimitPartition.GetFixedWindowLimiter(
+            httpContext.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new FixedWindowRateLimiterOptions
+            {
+                PermitLimit = isTesting ? int.MaxValue : 120,
+                Window = TimeSpan.FromMinutes(1),
+                QueueLimit = 0,
+                AutoReplenishment = true
+            }));
+});
 builder.Services.AddScoped<ICityRepository, CityRepository>();
 builder.Services.AddScoped<IGetAllCitiesService, GetAllCities>();
 builder.Services.AddScoped<ICreateCityService, CreateCity>();
@@ -242,6 +268,7 @@ if (app.Environment.IsDevelopment())
 // Keep request logging outside the exception handler so it records handled error responses too.
 app.UseMiddleware<RequestLoggingMiddleware>();
 app.UseExceptionHandler();
+app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();

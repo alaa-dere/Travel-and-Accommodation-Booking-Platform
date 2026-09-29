@@ -1,10 +1,12 @@
 using HotelBooking.Application.Payments;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace HotelBooking.API.Controllers;
 
 [ApiController]
 [Route("api/payments/webhooks")]
+[EnableRateLimiting("stripe-webhook")]
 public sealed class PaymentWebhooksController : ControllerBase
 {
     private readonly IPaymentWebhookService _webhookService;
