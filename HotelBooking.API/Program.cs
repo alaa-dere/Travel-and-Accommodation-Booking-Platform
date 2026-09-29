@@ -272,6 +272,11 @@ app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapControllers();
+app.MapGet("/", () => Results.Ok(new
+{
+    service = "Hotel Booking API",
+    status = "Running"
+}));
 
 app.Run();
 public partial class Program { }
