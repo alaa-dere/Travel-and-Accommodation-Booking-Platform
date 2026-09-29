@@ -1,4 +1,4 @@
-name: Hotel Booking CI
+name: Hotel Booking CI/CD
 
 on:
   push:
@@ -39,3 +39,95 @@ jobs:
 
       - name: Build Docker images
         run: docker compose build api migrations
+
+  deploy:
+    name: Deploy to Azure
+    if: github.event_name == 'push' && github.ref == 'refs/heads/Alaa'
+    needs: build-and-test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: hotelbooking-production
+      cancel-in-progress: false
+
+    env:
+      REGISTRY: hotelbookingalaa2026.azurecr.io
+      REGISTRY_NAME: hotelbookingalaa2026
+      RESOURCE_GROUP: hotelbooking-rg
+      VM_NAME: hotelbooking-vm
+      API_IMAGE: hotelbooking-api
+      MIGRATIONS_IMAGE: hotelbooking-migrations
+      LIVE_URL: https://hotelbooking-alaa-2026.uaenorth.cloudapp.azure.com
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Sign in to Azure with OIDC
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Sign in to Azure Container Registry
+        run: az acr login --name "$REGISTRY_NAME"
+
+      - name: Build and push versioned images
+        run: |
+          docker build \
+            --target final \
+            --tag "$REGISTRY/$API_IMAGE:${{ github.sha }}" \
+            .
+          docker build \
+            --target migrations \
+            --tag "$REGISTRY/$MIGRATIONS_IMAGE:${{ github.sha }}" \
+            .
+          docker push "$REGISTRY/$API_IMAGE:${{ github.sha }}"
+          docker push "$REGISTRY/$MIGRATIONS_IMAGE:${{ github.sha }}"
+
+      - name: Apply migrations and deploy API
+        run: |
+          deployment_output="$(
+            az vm run-command invoke \
+              --resource-group "$RESOURCE_GROUP" \
+              --name "$VM_NAME" \
+              --command-id RunShellScript \
+              --scripts "
+                set -e
+                cd /home/azureuser/hotelbooking
+                az login --identity >/dev/null
+                az acr login --name $REGISTRY_NAME
+                sed -i -E 's|hotelbooking-api:[^[:space:]]+|hotelbooking-api:${{ github.sha }}|' compose.yml
+                sed -i -E 's|hotelbooking-migrations:[^[:space:]]+|hotelbooking-migrations:${{ github.sha }}|' compose.yml
+                docker compose -f compose.yml pull api migrations
+                docker compose -f compose.yml run --rm migrations
+                docker compose -f compose.yml up -d --no-deps --force-recreate api
+                docker inspect --format '{{.Config.Image}}' hotelbooking-api | grep -Fx '$REGISTRY/$API_IMAGE:${{ github.sha }}'
+                echo 'DEPLOYMENT_SUCCEEDED:${{ github.sha }}'
+              " \
+              --query 'value[0].message' \
+              --output tsv
+          )"
+
+          echo "$deployment_output"
+          echo "$deployment_output" | grep --fixed-strings "DEPLOYMENT_SUCCEEDED:${{ github.sha }}"
+
+      - name: Verify production deployment
+        run: |
+          for attempt in {1..12}; do
+            response="$(curl --silent --show-error --fail "$LIVE_URL" || true)"
+            if echo "$response" | grep --quiet '"status":"Running"'; then
+              echo "Production deployment is healthy."
+              exit 0
+            fi
+
+            echo "Health check attempt $attempt failed; retrying in 5 seconds."
+            sleep 5
+          done
+
+          echo "Production deployment did not become healthy in time."
+          exit 1

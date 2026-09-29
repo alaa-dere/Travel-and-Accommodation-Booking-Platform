@@ -116,9 +116,12 @@ The public deployment uses:
 - A VM-local production `.env` file with restricted permissions. Secrets are
   excluded from Git and Docker build contexts.
 
-Deployment is currently a controlled, versioned container release. GitHub
-Actions provides continuous integration; automatic production deployment is
-not claimed by this repository.
+GitHub Actions provides continuous integration and deployment. Every push to
+the `Alaa` branch must pass the Release build and complete automated test suite
+before deployment starts. The pipeline authenticates to Azure through OIDC,
+builds commit-versioned API and migration images, pushes them to Azure Container
+Registry, applies migrations on the VM, replaces the API container, and verifies
+the public HTTPS endpoint. Failed builds or tests cannot reach production.
 
 ## Prerequisites
 
