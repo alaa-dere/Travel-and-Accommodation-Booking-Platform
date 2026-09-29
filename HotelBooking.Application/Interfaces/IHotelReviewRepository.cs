@@ -6,6 +6,8 @@ namespace HotelBooking.Application.Interfaces;
 public interface IHotelReviewRepository
 {
     Task<List<ReviewResponseDto>> GetReviewsByHotelIdAsync(int hotelId);
+    Task<List<ReviewResponseDto>> GetReviewsByHotelIdAsync(int hotelId, int pageNumber);
+    Task<double?> GetAverageRatingAsync(int hotelId);
     Task<Booking?> GetBookingForReviewAsync(int bookingId);
     Task AddReviewAsync(Review review);
     Task SaveChangesAsync();

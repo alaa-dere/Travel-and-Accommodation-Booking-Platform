@@ -8,10 +8,16 @@ namespace HotelBooking.Application.HotelReviews;
 public class SubmitHotelReviewService : ISubmitHotelReviewService
 {
     private readonly IHotelReviewRepository _hotelReviewRepository;
+    private readonly TimeProvider _timeProvider;
 
-    public SubmitHotelReviewService(IHotelReviewRepository hotelReviewRepository)
+    public SubmitHotelReviewService(IHotelReviewRepository hotelReviewRepository, TimeProvider timeProvider)
     {
         _hotelReviewRepository = hotelReviewRepository;
+        _timeProvider = timeProvider;
+    }
+
+    public SubmitHotelReviewService(IHotelReviewRepository hotelReviewRepository) : this(hotelReviewRepository, TimeProvider.System)
+    {
     }
 
     public async Task SubmitReviewAsync(int hotelId, int userId, SubmitReviewRequestDto request)
@@ -34,7 +40,7 @@ public class SubmitHotelReviewService : ISubmitHotelReviewService
 
         if (booking.UserId != userId)
         {
-            throw new BadRequestException("You cannot review another customer's booking.");
+            throw new NotFoundException("Booking not found.");
         }
 
         if (booking.Room == null || booking.Room.HotelId != hotelId)
@@ -47,7 +53,8 @@ public class SubmitHotelReviewService : ISubmitHotelReviewService
             throw new BadRequestException("Only completed bookings can be reviewed.");
         }
 
-        if (booking.CheckOut > DateTime.UtcNow)
+        var utcNow = _timeProvider.GetUtcNow().UtcDateTime;
+        if (booking.CheckOut > utcNow)
         {
             throw new BadRequestException("A review cannot be submitted before the stay is completed.");
         }
@@ -57,7 +64,7 @@ public class SubmitHotelReviewService : ISubmitHotelReviewService
             throw new BadRequestException("A review has already been submitted for this booking.");
         }
 
-        var review = new Review(request.BookingId, request.Rating, request.Comment);
+        var review = new Review(request.BookingId, request.Rating, request.Comment, utcNow);
         await _hotelReviewRepository.AddReviewAsync(review);
         await _hotelReviewRepository.SaveChangesAsync();
     }

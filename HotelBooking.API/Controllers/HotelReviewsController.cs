@@ -19,14 +19,14 @@ public class HotelReviewsController : ControllerBase
         _submitHotelReviewService = submitHotelReviewService;
     }
 
-    [HttpGet("{hotelId:int}/reviews")]
-    public async Task<IActionResult> GetHotelReviewsAsync(int hotelId)
+    [HttpGet("{hotelId:int:min(1)}/reviews")]
+    public async Task<ActionResult<HotelReviewsResponseDto>> GetHotelReviewsAsync(int hotelId, [FromQuery] HotelReviewsRequestDto request)
     {
-        var result = await _getHotelReviewsService.GetHotelReviewsAsync(hotelId);
+        var result = await _getHotelReviewsService.GetHotelReviewsAsync(hotelId, request.PageNumber);
         return Ok(result);
     }
     
-    [HttpPost("{hotelId:int}/reviews")]
+    [HttpPost("{hotelId:int:min(1)}/reviews")]
     public async Task<IActionResult> SubmitReviewAsync(int hotelId, [FromBody] SubmitReviewRequestDto request)
     {
         var userIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);

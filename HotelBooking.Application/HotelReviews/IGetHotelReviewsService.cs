@@ -4,5 +4,5 @@ namespace HotelBooking.Application.HotelReviews;
 
 public interface IGetHotelReviewsService
 {
-    Task<HotelReviewsResponseDto> GetHotelReviewsAsync(int hotelId);
+    Task<HotelReviewsResponseDto> GetHotelReviewsAsync(int hotelId, int pageNumber = 1);
 }

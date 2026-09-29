@@ -102,7 +102,7 @@ public class ReviewTests
     }
 
     [Fact]
-    public void Constructor_ShouldPreserveCommentAsProvided()
+    public void Constructor_ShouldTrimComment()
     {
         // Arrange
         var comment = "   Excellent hotel   ";
@@ -114,7 +114,7 @@ public class ReviewTests
             comment);
 
         // Assert
-        Assert.Equal(comment, review.Comment);
+        Assert.Equal("Excellent hotel", review.Comment);
     }
 
     [Fact]

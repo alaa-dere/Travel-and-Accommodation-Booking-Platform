@@ -159,7 +159,7 @@ public class SubmitHotelReviewServiceTests
                 request);
 
         // Assert
-        await Assert.ThrowsAsync<BadRequestException>(action);
+        await Assert.ThrowsAsync<NotFoundException>(action);
 
         VerifyReviewWasNotSaved();
     }

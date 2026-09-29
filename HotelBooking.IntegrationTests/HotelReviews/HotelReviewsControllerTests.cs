@@ -130,6 +130,33 @@ public class HotelReviewsControllerTests : IClassFixture<CustomWebApplicationFac
     }
 
     [Fact]
+    public async Task GetHotelReviews_ShouldReturnTenReviewsPerPage()
+    {
+        var customer = await CreateUserAsync(Role.Customer);
+        var hotel = await CreateHotelAsync();
+        var room = await CreateRoomAsync(hotel.HotelId);
+        for (var index = 0; index < 11; index++)
+        {
+            var booking = await CreateBookingAsync(customer, hotel, room, BookingStatus.Completed);
+            await CreateReviewAsync(booking.BookingId, 5, $"Review {index}");
+        }
+        using var client = CreateAuthenticatedClient(customer);
+
+        var firstResponse = await client.GetFromJsonAsync<HotelReviewsResponseDto>(
+            $"/api/hotels/{hotel.HotelId}/reviews?pageNumber=1");
+        var secondResponse = await client.GetFromJsonAsync<HotelReviewsResponseDto>(
+            $"/api/hotels/{hotel.HotelId}/reviews?pageNumber=2");
+
+        Assert.NotNull(firstResponse);
+        Assert.Equal(10, firstResponse.Reviews.Count);
+        Assert.True(firstResponse.HasNextPage);
+        Assert.NotNull(secondResponse);
+        Assert.Single(secondResponse.Reviews);
+        Assert.False(secondResponse.HasNextPage);
+        Assert.Equal(5d, secondResponse.Rating);
+    }
+
+    [Fact]
     public async Task SubmitReview_WithValidRequest_ShouldReturnNoContentAndPersistReview()
     {
         var customer = await CreateUserAsync(Role.Customer);
@@ -198,7 +225,7 @@ public class HotelReviewsControllerTests : IClassFixture<CustomWebApplicationFac
         using var client = CreateAuthenticatedClient(otherCustomer);
         var response = await client.PostAsJsonAsync(
             $"/api/hotels/{hotel.HotelId}/reviews", ValidRequest(booking.BookingId));
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Fact]

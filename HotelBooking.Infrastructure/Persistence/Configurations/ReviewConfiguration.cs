@@ -11,5 +11,6 @@ public class ReviewConfiguration :  IEntityTypeConfiguration<Review>
         builder.HasKey(r => r.ReviewId);
         builder.HasOne(r => r.Booking).WithOne(b => b.Review).HasForeignKey<Review>(r => r.BookingId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(b => b.BookingId).IsUnique();
+        builder.Property(review => review.Comment).HasMaxLength(2000).IsRequired();
     }
 }

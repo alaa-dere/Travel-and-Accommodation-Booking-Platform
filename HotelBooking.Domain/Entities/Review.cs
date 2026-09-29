@@ -2,6 +2,10 @@ namespace HotelBooking.Domain.Entities;
 
 public class Review
 {
+    private Review()
+    {
+    }
+
     public int ReviewId  { get; set; }
     public int BookingId   { get; set; }
     public int Rating { get; set; }
@@ -9,7 +13,7 @@ public class Review
     public DateTime CreatedAt { get; set; }
     public Booking? Booking { get; set; }
 
-    public Review(int bookingId, int rating, string comment)
+    public Review(int bookingId, int rating, string comment, DateTime? createdAt = null)
     {
         if (bookingId <= 0)
         {
@@ -25,10 +29,19 @@ public class Review
         {
             throw new ArgumentException("Comment must not be empty");
         }
-        
+        if (comment.Length > 2000)
+        {
+            throw new ArgumentException("Comment cannot exceed 2000 characters.", nameof(comment));
+        }
+        var creationTime = createdAt ?? DateTime.UtcNow;
+        if (creationTime.Kind != DateTimeKind.Utc)
+        {
+            throw new ArgumentException("Review creation time must be in UTC.", nameof(createdAt));
+        }
+
         BookingId = bookingId;
         Rating = rating;
-        Comment = comment;
-        CreatedAt = DateTime.UtcNow;
+        Comment = comment.Trim();
+        CreatedAt = creationTime;
     }
 }
