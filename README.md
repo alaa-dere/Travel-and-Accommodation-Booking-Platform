@@ -282,6 +282,27 @@ publishing, database migration, and the final ASP.NET runtime image. This keeps
 the .NET SDK out of the API runtime image and allows Compose to require a
 successful migration before starting the API.
 
+## Project management
+
+Development tasks, user stories, sprint progress, and acceptance criteria are
+tracked on the [Hotel Booking System Jira board](https://alaadere35.atlassian.net/jira/software/projects/HBS/boards/35/backlog).
+
+The timeline provides an overview of the project's epics and their completion:
+
+![Jira project timeline](docs/images/jira-timeline.png)
+
+Completed authentication and hotel-discovery work items:
+
+<p>
+  <img src="docs/images/jira-authentication-done.png" alt="Completed authentication work items" width="49%">
+  <img src="docs/images/jira-discovery-done.png" alt="Completed hotel discovery work items" width="49%">
+</p>
+
+User stories include explicit acceptance criteria that connect requirements to
+implementation and testing:
+
+![Jira search user story acceptance criteria](docs/images/jira-acceptance-criteria.png)
+
 ## Run tests
 
 GitHub Actions runs the Release build, all unit and integration tests, and builds
