@@ -51,7 +51,13 @@ public class UpdateNearbyAttractionService : IUpdateNearbyAttractionService
             throw new NotFoundException("Nearby attraction not found.");
         }
 
-        attraction.Update(request.Name, request.Description, request.Latitude, request.Longitude);
+        var normalizedName = request.Name.Trim();
+        if (await _attractionRepository.ExistsAsync(attraction.HotelId, normalizedName, attraction.NearbyAttractionId))
+        {
+            throw new ConflictException("An attraction with the same name already exists for this hotel.");
+        }
+
+        attraction.Update(normalizedName, request.Description, request.Latitude, request.Longitude);
         await _attractionRepository.SaveChangesAsync();
     }
 }

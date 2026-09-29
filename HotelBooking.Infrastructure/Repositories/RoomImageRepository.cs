@@ -1,7 +1,9 @@
 using HotelBooking.Application.Interfaces;
+using HotelBooking.Application.Exceptions;
 using HotelBooking.Domain.Entities;
 using HotelBooking.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Data.SqlClient;
 
 namespace HotelBooking.Infrastructure.Repositories;
 
@@ -24,6 +26,11 @@ public class RoomImageRepository : IRoomImageRepository
         return _dbContext.RoomImages.FirstOrDefaultAsync(image => image.RoomImageId == imageId);
     }
 
+    public Task<bool> ExistsAsync(int roomId, string imageUrl, int displayOrder)
+    {
+        return _dbContext.RoomImages.AsNoTracking().AnyAsync(image => image.RoomId == roomId && (image.ImageUrl == imageUrl || image.DisplayOrder == displayOrder));
+    }
+
     public void Delete(RoomImage roomImage)
     {
         _dbContext.RoomImages.Remove(roomImage);
@@ -31,6 +38,13 @@ public class RoomImageRepository : IRoomImageRepository
 
     public async Task SaveChangesAsync()
     {
-        await _dbContext.SaveChangesAsync();
+        try
+        {
+            await _dbContext.SaveChangesAsync();
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is SqlException { Number: 2601 or 2627 })
+        {
+            throw new ConflictException("The image URL or display order already exists for this room.");
+        }
     }
 }

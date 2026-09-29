@@ -173,6 +173,8 @@ builder.Services.AddScoped<IFeaturedDealsService, GetFeaturedDealsService>();
 builder.Services.AddScoped<IGetHotelDetailsService , GetHotelDetails>();
 builder.Services.AddScoped<IHotelImageRepository, HotelImageRepository>();
 builder.Services.AddScoped<IGetHotelImagesService, GetHotelImages>();
+builder.Services.AddScoped<IAddHotelImageService, AddHotelImageService>();
+builder.Services.AddScoped<IDeleteHotelImageService, DeleteHotelImageService>();
 builder.Services.AddScoped<IAvailableRoomRepository, AvailableRoomRepository>();
 builder.Services.AddScoped<IGetAvailableRoomsService, GetAvailableRooms>();
 builder.Services.AddScoped<IHotelReviewRepository, HotelReviewRepository>();

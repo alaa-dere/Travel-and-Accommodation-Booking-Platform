@@ -12,5 +12,6 @@ public class NearbyAttractionConfiguration : IEntityTypeConfiguration<NearbyAttr
         builder.HasOne(attraction => attraction.Hotel).WithMany(hotel => hotel.NearbyAttractions).HasForeignKey(attraction => attraction.HotelId).IsRequired().OnDelete(DeleteBehavior.Restrict);
         builder.Property(attraction => attraction.Name).IsRequired().HasMaxLength(100);
         builder.Property(attraction => attraction.Description).HasMaxLength(500);
+        builder.HasIndex(attraction => new { attraction.HotelId, attraction.Name }).IsUnique();
     }
 }

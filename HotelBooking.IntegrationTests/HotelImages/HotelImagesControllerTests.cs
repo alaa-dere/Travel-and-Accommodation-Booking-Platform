@@ -6,6 +6,7 @@ using HotelBooking.Application.Interfaces;
 using HotelBooking.Domain.Entities;
 using HotelBooking.IntegrationTests.Infrastructure;
 using HotelBooking.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace HotelBooking.IntegrationTests.HotelImages;
@@ -37,12 +38,12 @@ public class HotelImagesControllerTests : IClassFixture<CustomWebApplicationFact
     }
 
     [Fact]
-    public async Task GetHotelImages_WithNonNumericHotelId_ShouldReturnBadRequest()
+    public async Task GetHotelImages_WithNonNumericHotelId_ShouldReturnNotFound()
     {
         var customer = await CreateUserAsync(Role.Customer);
         using var client = CreateAuthenticatedClient(customer);
         var response = await client.GetAsync("/api/hotels/not-a-number/images");
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
@@ -108,6 +109,64 @@ public class HotelImagesControllerTests : IClassFixture<CustomWebApplicationFact
             image => { Assert.Equal("second.jpg", image.ImageUrl); Assert.Equal(2, image.DisplayOrder); },
             image => { Assert.Equal("third.jpg", image.ImageUrl); Assert.Equal(3, image.DisplayOrder); });
         Assert.DoesNotContain(result, image => image.ImageUrl == "other.jpg");
+    }
+
+    [Fact]
+    public async Task AddHotelImage_WithAdminToken_ShouldPersistImage()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var hotel = await CreateHotelAsync();
+        using var client = CreateAuthenticatedClient(admin);
+        var request = new AddHotelImageRequestDto
+        {
+            ImageUrl = "https://images.test/hotel.jpg",
+            DisplayOrder = 1
+        };
+
+        var response = await client.PostAsJsonAsync($"/api/hotels/{hotel.HotelId}/images", request);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
+        Assert.True(await db.HotelImages.AnyAsync(image =>
+            image.HotelId == hotel.HotelId && image.ImageUrl == request.ImageUrl));
+    }
+
+    [Fact]
+    public async Task AddHotelImage_WhenDisplayOrderIsDuplicated_ShouldReturnConflict()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var hotel = await CreateHotelAsync();
+        await AddImagesAsync(hotel.HotelId, ("first.jpg", 1));
+        using var client = CreateAuthenticatedClient(admin);
+
+        var response = await client.PostAsJsonAsync(
+            $"/api/hotels/{hotel.HotelId}/images",
+            new AddHotelImageRequestDto { ImageUrl = "second.jpg", DisplayOrder = 1 });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DeleteHotelImage_WhenImageBelongsToHotel_ShouldRemoveIt()
+    {
+        var admin = await CreateUserAsync(Role.Admin);
+        var hotel = await CreateHotelAsync();
+        await AddImagesAsync(hotel.HotelId, ("delete.jpg", 1));
+        int imageId;
+        using (var scope = _factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<HotelBookingDbContext>();
+            imageId = await db.HotelImages
+                .Where(image => image.HotelId == hotel.HotelId)
+                .Select(image => image.HotelImageId)
+                .SingleAsync();
+        }
+        using var client = CreateAuthenticatedClient(admin);
+
+        var response = await client.DeleteAsync($"/api/hotels/{hotel.HotelId}/images/{imageId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
     }
 
     private async Task<User> CreateUserAsync(Role role)

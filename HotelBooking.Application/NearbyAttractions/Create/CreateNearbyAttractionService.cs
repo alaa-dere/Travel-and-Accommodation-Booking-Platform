@@ -55,7 +55,13 @@ public class CreateNearbyAttractionService : ICreateNearbyAttractionService
             throw new NotFoundException("Hotel not found.");
         }
 
-        var attraction = new NearbyAttraction(request.HotelId, request.Name, request.Description, request.Latitude, request.Longitude);
+        var normalizedName = request.Name.Trim();
+        if (await _attractionRepository.ExistsAsync(request.HotelId, normalizedName))
+        {
+            throw new ConflictException("An attraction with the same name already exists for this hotel.");
+        }
+
+        var attraction = new NearbyAttraction(request.HotelId, normalizedName, request.Description, request.Latitude, request.Longitude);
 
         await _attractionRepository.AddAsync(attraction);
         await _attractionRepository.SaveChangesAsync();

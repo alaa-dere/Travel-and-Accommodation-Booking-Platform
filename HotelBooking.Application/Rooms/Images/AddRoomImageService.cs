@@ -24,7 +24,13 @@ public class AddRoomImageService : IAddRoomImageService
             throw new NotFoundException("Room not found");
         }
 
-        var roomImage = new RoomImage(request.ImageUrl, request.DisplayOrder, roomId);
+        var imageUrl = request.ImageUrl.Trim();
+        if (await _roomImageRepository.ExistsAsync(roomId, imageUrl, request.DisplayOrder))
+        {
+            throw new ConflictException("The image URL or display order already exists for this room.");
+        }
+
+        var roomImage = new RoomImage(imageUrl, request.DisplayOrder, roomId);
         await _roomImageRepository.AddAsync(roomImage);
         await _roomImageRepository.SaveChangesAsync();
     }

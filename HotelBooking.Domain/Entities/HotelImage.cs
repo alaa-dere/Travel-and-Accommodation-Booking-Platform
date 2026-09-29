@@ -20,12 +20,17 @@ public class HotelImage
             throw new ArgumentException("DisplayOrder must be greater than zero", nameof(displayOrder));
         }
 
+        if (imageUrl.Length > 500)
+        {
+            throw new ArgumentException("ImageUrl cannot exceed 500 characters", nameof(imageUrl));
+        }
+
         if (hotelId <= 0)
         {
             throw new ArgumentException("HotelId must be greater than zero", nameof(hotelId));
         }
         
-        ImageUrl  = imageUrl;
+        ImageUrl = imageUrl.Trim();
         DisplayOrder = displayOrder;
         HotelId = hotelId;
     }

@@ -20,11 +20,16 @@ public class RoomImage
             throw new ArgumentException("DisplayOrder must be greater than zero", nameof(displayOrder));
         }
 
+        if (imageUrl.Length > 500)
+        {
+            throw new ArgumentException("ImageUrl cannot exceed 500 characters", nameof(imageUrl));
+        }
+
         if (roomId <= 0)
         {
             throw new ArgumentException("RoomId must be greater than zero", nameof(roomId));
         }
-        ImageUrl  = imageUrl;
+        ImageUrl = imageUrl.Trim();
         DisplayOrder = displayOrder;
         RoomId = roomId;
     }

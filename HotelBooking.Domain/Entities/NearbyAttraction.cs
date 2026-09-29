@@ -17,7 +17,7 @@ public class NearbyAttraction
 
         HotelId = hotelId;
         Name = name.Trim();
-        Description = description?.Trim();
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
         Latitude = latitude;
         Longitude = longitude;
     }
@@ -27,7 +27,7 @@ public class NearbyAttraction
         Validate(HotelId, name, description,latitude, longitude);
 
         Name = name.Trim();
-        Description = description?.Trim();
+        Description = string.IsNullOrWhiteSpace(description) ? null : description.Trim();
         Latitude = latitude;
         Longitude = longitude;
     }

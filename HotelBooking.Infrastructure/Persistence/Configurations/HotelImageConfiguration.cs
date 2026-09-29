@@ -11,5 +11,7 @@ public class HotelImageConfiguration : IEntityTypeConfiguration<HotelImage>
         builder.HasKey(h => h.HotelImageId);
         builder.HasOne(i => i.Hotel).WithMany(h => h.HotelImages).HasForeignKey(h => h.HotelId).IsRequired();
         builder.Property(i => i.ImageUrl).IsRequired().HasMaxLength(500);
+        builder.HasIndex(image => new { image.HotelId, image.ImageUrl }).IsUnique();
+        builder.HasIndex(image => new { image.HotelId, image.DisplayOrder }).IsUnique();
     }
 }
