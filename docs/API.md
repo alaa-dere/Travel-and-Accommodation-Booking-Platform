@@ -92,7 +92,7 @@ response containing an `errors` object keyed by field name.
 
 | Method | Route | Role | Success |
 | --- | --- | --- | --- |
-| `POST` | `/api/Auth/register` | Public | `200` |
+| `POST` | `/api/Auth/register` | Public | `201` |
 | `POST` | `/api/Auth/login` | Public | `200` |
 | `GET` | `/api/hotels/{hotelId}/available-rooms` | Customer | `200` |
 | `POST` | `/api/hotels/{hotelId}/available-rooms/{roomId}/selection` | Customer | `200` |

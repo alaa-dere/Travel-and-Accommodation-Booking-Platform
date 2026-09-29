@@ -6,6 +6,120 @@ An ASP.NET Core Web API for hotel discovery and booking. The solution includes
 authentication, hotel and room administration, search, promotions, carts,
 checkout, invoices, reviews, nearby attractions, and customer recommendations.
 
+## Live deployment
+
+- **Production API:** [https://hotelbooking-alaa-2026.uaenorth.cloudapp.azure.com](https://hotelbooking-alaa-2026.uaenorth.cloudapp.azure.com)
+- **API reference:** [docs/API.md](docs/API.md)
+- **CI status:** shown by the GitHub Actions badge above
+- **Performance results:** [performance-tests/RESULTS.md](performance-tests/RESULTS.md)
+
+The root endpoint is a public deployment check and returns:
+
+```json
+{
+  "service": "Hotel Booking API",
+  "status": "Running"
+}
+```
+
+The deployed application runs in `Production`, so Swagger UI is intentionally
+disabled on the public server. The complete endpoint contract, roles, request
+formats, responses, and error behavior are documented in
+[docs/API.md](docs/API.md). Swagger remains available when the project is run
+locally in `Development`.
+
+## Evaluation guide
+
+A reviewer can assess the project in this order:
+
+1. Open the [live API](https://hotelbooking-alaa-2026.uaenorth.cloudapp.azure.com)
+   to verify that the HTTPS deployment is running.
+2. Review [the API reference](docs/API.md) for endpoints and authorization
+   rules.
+3. Inspect the GitHub Actions result for the Release build, automated tests,
+   and Docker image builds.
+4. Review the documented [performance results](performance-tests/RESULTS.md),
+   including the limitations of the test environment.
+5. Review the [architecture decisions](docs/architecture/decisions) for the
+   reasoning behind checkout, payment, expiration, messaging, and refund rules.
+6. Run the complete local environment with Docker Compose by following the
+   instructions below.
+
+## Main features
+
+- Customer registration, login, JWT authentication, and role-based access
+  control for `Customer` and `Admin` users.
+- Hotel search with dates, guest and room counts, pricing, ratings, amenities,
+  hotel type, room type, and paginated results.
+- Featured deals, recently visited hotels, and trending destinations.
+- Hotel details, galleries, rooms, date-based availability, reviews, geographic
+  location, and nearby attractions.
+- A single-hotel cart and checkout flow with concurrency-safe availability
+  checks and expiring pending bookings.
+- Stripe Payment Intents, signed webhooks, idempotent payment handling, and
+  refunds for eligible cancellations.
+- Invoices, confirmation PDFs, and asynchronous confirmation email delivery.
+- RabbitMQ consumers with retries and dead-letter queues for background work.
+- Admin management for cities, hotels, rooms, promotions, images, attractions,
+  and operational availability.
+- Consistent error responses, structured logging, rate limiting, ownership
+  checks, validation, and protection of sensitive data.
+
+## Architecture
+
+The solution follows Clean Architecture and keeps dependencies directed toward
+the domain and application core:
+
+```mermaid
+flowchart LR
+    Client[API client] --> API[HotelBooking.API]
+    API --> Application[HotelBooking.Application]
+    Infrastructure[HotelBooking.Infrastructure] --> Application
+    Application --> Domain[HotelBooking.Domain]
+    Infrastructure --> Domain
+    Infrastructure --> SQL[(SQL Server / Azure SQL)]
+    Infrastructure --> Stripe[Stripe]
+    Infrastructure --> RabbitMQ[RabbitMQ]
+    Infrastructure --> SMTP[SMTP email]
+```
+
+The Domain project contains entities, value objects, and core rules. The
+Application project contains use cases and abstractions. Infrastructure
+implements persistence and external integrations. The API project owns HTTP,
+authentication, middleware, rate limiting, and composition.
+
+Important architectural choices are recorded as ADRs rather than being hidden
+in implementation details:
+
+- [Single-hotel checkout](docs/architecture/decisions/ADR-001-single-hotel-checkout.md)
+- [Confirm bookings after payment](docs/architecture/decisions/ADR-002-confirm-bookings-after-payment.md)
+- [Expire pending bookings](docs/architecture/decisions/ADR-003-expire-pending-bookings.md)
+- [Asynchronous checkout tasks](docs/architecture/decisions/ADR-004-asynchronous-checkout-tasks.md)
+- [Post-checkout booking modification limits](docs/architecture/decisions/ADR-005-limit-post-checkout-booking-modifications.md)
+- [Refund cancelled paid bookings](docs/architecture/decisions/ADR-006-refund-cancelled-paid-bookings.md)
+- [Prevent overlapping promotions](docs/architecture/decisions/ADR-007-prevent-overlapping-hotel-promotions.md)
+
+## Production deployment architecture
+
+The public deployment uses:
+
+- An Azure Ubuntu VM running the API, RabbitMQ, and Caddy in Docker containers.
+- Caddy as a reverse proxy with automatic HTTPS; the application port is not
+  exposed directly to the internet.
+- Azure SQL Database with encrypted connections, EF Core migrations, a narrowly
+  scoped firewall rule, and serverless auto-pause.
+- Azure Container Registry for versioned API and migration images.
+- A system-assigned Managed Identity with the `AcrPull` role, avoiding registry
+  passwords on the VM.
+- Stripe sandbox Payment Intents and a signed HTTPS webhook endpoint.
+- SMTP over TLS for booking-confirmation email.
+- A VM-local production `.env` file with restricted permissions. Secrets are
+  excluded from Git and Docker build contexts.
+
+Deployment is currently a controlled, versioned container release. GitHub
+Actions provides continuous integration; automatic production deployment is
+not claimed by this repository.
+
 ## Prerequisites
 
 Install the following tools before setting up the project:
@@ -44,8 +158,8 @@ dotnet tool update --global dotnet-ef --version 8.*
 Clone the repository and enter its directory:
 
 ```powershell
-git clone <repository-url>
-cd HotelBooking
+git clone https://github.com/alaa-dere/Travel-and-Accommodation-Booking-Platform.git
+cd Travel-and-Accommodation-Booking-Platform
 ```
 
 Restore the NuGet packages:
@@ -237,6 +351,12 @@ file is excluded from both Git and the Docker build context.
 SQL_SA_PASSWORD=<strong-sql-server-password>
 JWT_KEY=<long-random-jwt-signing-key>
 ADMIN_PASSWORD=<strong-initial-admin-password>
+RABBITMQ_PASSWORD=<strong-rabbitmq-password>
+STRIPE_SECRET_KEY=<stripe-test-secret-key>
+STRIPE_PUBLISHABLE_KEY=<stripe-test-publishable-key>
+STRIPE_WEBHOOK_SECRET=<stripe-webhook-signing-secret>
+EMAIL_SENDER_EMAIL=<smtp-sender-address>
+EMAIL_APP_PASSWORD=<smtp-app-password>
 ```
 
 The SQL Server password must satisfy SQL Server's password policy. Do not commit
@@ -308,6 +428,18 @@ implementation and testing:
 GitHub Actions runs the Release build, all unit and integration tests, and builds
 the API and migration Docker images for pushes and pull requests targeting
 `Alaa` or `main`.
+
+The latest complete local verification passed **1,190 automated tests**:
+
+- 718 unit tests.
+- 472 integration/API tests.
+
+The k6 suite also passed all configured thresholds. Its most demanding mixed
+customer-journey run reached 1,000 concurrent virtual users, 32,082 requests,
+approximately 629 requests/second, 0% failed requests, and a 479.01 ms p95. See
+[the full results and limitations](performance-tests/RESULTS.md); these local
+results are evidence of stability under the tested workload, not a production
+capacity guarantee.
 
 Run all unit and integration tests:
 
