@@ -21,7 +21,7 @@ public class BookingsController : ControllerBase
         _cancelBookingService = cancelBookingService;
     }
 
-    [HttpPut("{bookingId:int}")]
+    [HttpPatch("{bookingId:int:min(1)}")]
     public async Task<IActionResult> ModifyBooking(int bookingId, [FromBody] ModifyBookingRequestDto request)
     {
         var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);
@@ -34,7 +34,7 @@ public class BookingsController : ControllerBase
         return NoContent();
     }
     
-    [HttpDelete("{bookingId:int}")]
+    [HttpDelete("{bookingId:int:min(1)}")]
     public async Task<IActionResult> CancelBooking(int bookingId)
     {
         var userIdValue = User.FindFirstValue(ClaimTypes.NameIdentifier);

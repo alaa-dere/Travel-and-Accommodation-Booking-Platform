@@ -11,6 +11,7 @@ public sealed class PaymentWebhookService : IPaymentWebhookService
 {
     private readonly IPaymentGateway _gateway;
     private readonly IPaymentRepository _payments;
+    private readonly IBookingRepository _bookings;
     private readonly IBookingTransactionManager _transactionManager;
     private readonly ICartRepository _cartRepository;
     private readonly IUserRepository _userRepository;
@@ -20,6 +21,7 @@ public sealed class PaymentWebhookService : IPaymentWebhookService
     public PaymentWebhookService(
         IPaymentGateway gateway,
         IPaymentRepository payments,
+        IBookingRepository bookings,
         IBookingTransactionManager transactionManager,
         ICartRepository cartRepository,
         IUserRepository userRepository,
@@ -28,6 +30,7 @@ public sealed class PaymentWebhookService : IPaymentWebhookService
     {
         _gateway = gateway;
         _payments = payments;
+        _bookings = bookings;
         _transactionManager = transactionManager;
         _cartRepository = cartRepository;
         _userRepository = userRepository;
@@ -138,15 +141,19 @@ public sealed class PaymentWebhookService : IPaymentWebhookService
         return _transactionManager.ExecuteSerializableAsync(async () =>
         {
             var payment = await _payments.GetByProviderRefundIdAsync(webhookEvent.ProviderObjectId);
-            if (payment is null)
+            var booking = await _bookings.GetByProviderRefundIdAsync(webhookEvent.ProviderObjectId);
+            if (payment is null && booking is null)
             {
                 throw new PaymentProviderUnavailableException("The refund is not available yet. Stripe should retry this webhook.");
             }
-            payment.RecordRefund(
-                webhookEvent.ProviderObjectId,
-                MapRefundStatus(webhookEvent.RefundStatus),
-                webhookEvent.FailureCode,
-                _timeProvider.GetUtcNow().UtcDateTime);
+
+            var refundStatus = MapRefundStatus(webhookEvent.RefundStatus);
+            var processedAt = _timeProvider.GetUtcNow().UtcDateTime;
+            payment?.RecordRefund(webhookEvent.ProviderObjectId, refundStatus, webhookEvent.FailureCode, processedAt);
+            if (booking?.RefundedAmount is decimal refundedAmount)
+            {
+                booking.RecordCustomerRefund(refundedAmount, webhookEvent.ProviderObjectId, refundStatus, webhookEvent.FailureCode, processedAt);
+            }
         });
     }
 

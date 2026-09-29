@@ -42,6 +42,17 @@ public sealed class TestPaymentGateway : IPaymentGateway
             RefundGatewayStatus.Succeeded));
     }
 
+    public Task<RefundGatewayResult> RefundAsync(
+        string providerPaymentId,
+        string idempotencyKey,
+        decimal amount,
+        CancellationToken cancellationToken = default)
+    {
+        return Task.FromResult(new RefundGatewayResult(
+            "re_test_partial",
+            RefundGatewayStatus.Succeeded));
+    }
+
     public PaymentProviderWebhookEvent ParseWebhook(string payload, string signature) =>
         new(
             "evt_test",

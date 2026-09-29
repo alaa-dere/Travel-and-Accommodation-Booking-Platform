@@ -1,4 +1,3 @@
-using HotelBooking.Application.Bookings;
 using HotelBooking.Application.Bookings.Dtos;
 using HotelBooking.Application.Bookings.Modify;
 using HotelBooking.Application.Exceptions;
@@ -10,511 +9,163 @@ namespace HotelBooking.UnitTests.Bookings.Modify;
 
 public class ModifyBookingServiceTests
 {
-    private readonly Mock<IBookingRepository> _bookingRepositoryMock;
-    private readonly Mock<IBookingAvailabilityService> _availabilityServiceMock;
-    private readonly Mock<IBookingPricingService> _pricingServiceMock;
-    private readonly Mock<IBookingTransactionManager> _transactionManagerMock;
-    private readonly Mock<IRoomRepository> _roomRepositoryMock;
+    private readonly Mock<IBookingRepository> _bookingRepository = new();
+    private readonly Mock<IRoomRepository> _roomRepository = new();
     private readonly ModifyBookingService _service;
 
     public ModifyBookingServiceTests()
     {
-        _bookingRepositoryMock = new Mock<IBookingRepository>();
-        _availabilityServiceMock = new Mock<IBookingAvailabilityService>();
-        _pricingServiceMock = new Mock<IBookingPricingService>();
-        _transactionManagerMock = new Mock<IBookingTransactionManager>();
-        _roomRepositoryMock = new Mock<IRoomRepository>();
-        _transactionManagerMock.Setup(manager => manager.ExecuteSerializableAsync(It.IsAny<Func<Task>>())).Returns((Func<Task> operation) => operation());
-
         _service = new ModifyBookingService(
-            _bookingRepositoryMock.Object,
-            _availabilityServiceMock.Object,
-            _pricingServiceMock.Object,
-            _transactionManagerMock.Object,
-            _roomRepositoryMock.Object,
+            _bookingRepository.Object,
+            _roomRepository.Object,
             TimeProvider.System);
     }
 
-    [Fact]
-    public async Task ModifyAsync_WhenBookingIdIsInvalid_ShouldThrowBadRequestException()
+    [Theory]
+    [InlineData(0, 1)]
+    [InlineData(1, 0)]
+    public async Task ModifyAsync_WhenIdentifierIsInvalid_ShouldThrowBadRequest(int bookingId, int userId)
     {
-        var request = CreateValidRequest();
-        var action = async () => await _service.ModifyAsync(0, 1, request);
+        var action = () => _service.ModifyAsync(bookingId, userId, ValidRequest());
 
         await Assert.ThrowsAsync<BadRequestException>(action);
-
-        _transactionManagerMock.Verify(manager => manager.ExecuteSerializableAsync(It.IsAny<Func<Task>>()), Times.Never);
     }
 
     [Fact]
-    public async Task ModifyAsync_WhenUserIdIsInvalid_ShouldThrowBadRequestException()
+    public async Task ModifyAsync_WhenBookingDoesNotBelongToUser_ShouldThrowNotFound()
     {
-        var request = CreateValidRequest();
-        var action = async () => await _service.ModifyAsync(1, 0, request);
+        _bookingRepository
+            .Setup(repository => repository.GetByIdForUserAsync(1, 1))
+            .ReturnsAsync((Booking?)null);
 
-        await Assert.ThrowsAsync<BadRequestException>(action);
-
-        _transactionManagerMock.Verify(manager => manager.ExecuteSerializableAsync(It.IsAny<Func<Task>>()), Times.Never);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenBookingDoesNotExist_ShouldThrowNotFoundException()
-    {
-        var request = CreateValidRequest();
-
-        _bookingRepositoryMock.Setup(repository => repository.GetByIdForUserAsync(1, 1)).ReturnsAsync((Booking?)null);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
+        var action = () => _service.ModifyAsync(1, 1, ValidRequest());
 
         await Assert.ThrowsAsync<NotFoundException>(action);
     }
 
-    [Fact]
-    public async Task ModifyAsync_WhenStayHasAlreadyStarted_ShouldThrowConflictException()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ModifyAsync_WhenBookingCannotBeModified_ShouldThrowConflict(bool cancelled)
     {
-        var booking = CreateBooking(checkIn: DateTime.UtcNow.AddDays(-1), checkOut: DateTime.UtcNow.AddDays(2));
-        var request = CreateValidRequest();
+        var booking = CreateBooking(cancelled ? DateTime.UtcNow.AddDays(2) : DateTime.UtcNow.AddDays(-1));
+        if (cancelled)
+        {
+            booking.Cancel(DateTime.UtcNow);
+        }
+        SetupBooking(booking);
 
-        _bookingRepositoryMock.Setup(repository => repository.GetByIdForUserAsync(1, 1)).ReturnsAsync(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
+        var action = () => _service.ModifyAsync(1, 1, ValidRequest());
 
         await Assert.ThrowsAsync<ConflictException>(action);
-
-        _roomRepositoryMock.Verify(repository => repository.GetRoomByIdAsync(It.IsAny<int>()), Times.Never);
     }
 
     [Fact]
-    public async Task ModifyAsync_WhenRoomIdIsInvalid_ShouldThrowBadRequestException()
+    public async Task ModifyAsync_WhenRoomIsMissing_ShouldThrowInvalidOperationException()
     {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.RoomId = 0;
+        SetupBooking(CreateBooking());
+        _roomRepository
+            .Setup(repository => repository.GetRoomByIdAsync(1))
+            .ReturnsAsync((Room?)null);
 
-        SetupBooking(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenCheckOutIsNotAfterCheckIn_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.CheckOut = request.CheckIn;
-
-        SetupBooking(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenAdultsIsLessThanOne_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.Adults = 0;
-
-        SetupBooking(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenChildrenIsNegative_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.Children = -1;
-
-        SetupBooking(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenSpecialRequestsExceedMaximumLength_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.SpecialRequests = new string('a', 1001);
-
-        SetupBooking(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenInvoiceIsNotLoaded_ShouldThrowInvalidOperationException()
-    {
-        var booking = CreateBooking();
-        booking.Invoice = null;
-
-        var request = CreateValidRequest();
-
-        SetupBooking(booking);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
+        var action = () => _service.ModifyAsync(1, 1, ValidRequest());
 
         await Assert.ThrowsAsync<InvalidOperationException>(action);
-
-        _roomRepositoryMock.Verify(repository => repository.GetRoomByIdAsync(It.IsAny<int>()), Times.Never);
     }
 
-    [Fact]
-    public async Task ModifyAsync_WhenRequestedRoomDoesNotExist_ShouldThrowNotFoundException()
+    [Theory]
+    [InlineData(3, 0)]
+    [InlineData(1, 3)]
+    public async Task ModifyAsync_WhenGuestCountExceedsCapacity_ShouldThrowBadRequest(int adults, int children)
     {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-
-        SetupBooking(booking);
-
-        _roomRepositoryMock.Setup(repository => repository.GetRoomByIdAsync(request.RoomId)).ReturnsAsync((Room?)null);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<NotFoundException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenRequestedRoomIsInactive_ShouldThrowConflictException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-
-        var room = CreateRoom();
-        room.ChangeStatus(false);
-
-        SetupBooking(booking);
-
-        _roomRepositoryMock.Setup(repository => repository.GetRoomByIdAsync(request.RoomId)).ReturnsAsync(room);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<ConflictException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenRequestedRoomIsOperationallyUnavailable_ShouldThrowConflictException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-
-        var room = CreateRoom();
-        room.ChangeOperationalAvailability(false);
-
-        SetupBooking(booking);
-
-        _roomRepositoryMock.Setup(repository => repository.GetRoomByIdAsync(request.RoomId)).ReturnsAsync(room);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<ConflictException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenAdultsExceedRoomCapacity_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.Adults = 3;
-
-        var room = CreateRoom();
-
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenChildrenExceedRoomCapacity_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.Children = 3;
-
-        var room = CreateRoom();
-
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenRequestedRoomBelongsToDifferentHotel_ShouldThrowBadRequestException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        var room = CreateRoom(hotelId: 2);
-
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<BadRequestException>(action);
-
-        _availabilityServiceMock.Verify(service => service.IsRoomAvailableAsync(
-                It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int?>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenRoomOrDatesChangedAndRoomIsUnavailable_ShouldThrowConflictException()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.RoomId = 2;
-
-        var room = CreateRoom(roomId: 2);
-
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        _availabilityServiceMock
-            .Setup(service => service.IsRoomAvailableAsync(request.RoomId, request.CheckIn, request.CheckOut, booking.BookingId))
-            .ReturnsAsync(false);
-
-        var action = async () => await _service.ModifyAsync(1, 1, request);
-
-        await Assert.ThrowsAsync<ConflictException>(action);
-
-        _pricingServiceMock.Verify(service => service.CalculatePriceAsync(
-                It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>()),
-            Times.Never);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenRoomOrDatesChanged_ShouldCheckAvailabilityAndRecalculatePrice()
-    {
-        var booking = CreateBooking();
-        var request = CreateValidRequest();
-        request.RoomId = 2;
-
-        var room = CreateRoom(roomId: 2);
-
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        _availabilityServiceMock.Setup(service => service.IsRoomAvailableAsync(request.RoomId, request.CheckIn, request.CheckOut, booking.BookingId)).ReturnsAsync(true);
-
-        _pricingServiceMock.Setup(service => service.CalculatePriceAsync(request.RoomId, request.CheckIn, request.CheckOut, It.IsAny<DateTime>()))
-            .ReturnsAsync(new BookingPriceResultDto
-            {
-                PricePerNight = 150m,
-                NumberOfNights = 2,
-                OriginalTotalPrice = 300m,
-                DiscountPercentage = 10,
-                DiscountAmount = 30m,
-                TotalPrice = 270m
-            });
-
-        await _service.ModifyAsync(1, 1, request);
-
-        Assert.Equal(2, booking.RoomId);
-        Assert.Equal(150m, booking.PricePerNight);
-        Assert.Equal(300m, booking.OriginalTotalPrice);
-        Assert.Equal(10, booking.DiscountPercentage);
-        Assert.Equal(30m, booking.DiscountAmount);
-        Assert.Equal(270m, booking.TotalPrice);
-
-        _availabilityServiceMock.Verify(service => service.IsRoomAvailableAsync(request.RoomId, request.CheckIn, request.CheckOut, booking.BookingId), Times.Once);
-        _pricingServiceMock.Verify(service => service.CalculatePriceAsync(request.RoomId, request.CheckIn, request.CheckOut, It.IsAny<DateTime>()), Times.Once);
-    }
-
-    [Fact]
-    public async Task ModifyAsync_WhenRoomAndDatesDidNotChange_ShouldKeepExistingPrice()
-    {
-        var booking = CreateBooking();
+        SetupBookingAndRoom(CreateBooking(), CreateRoom());
         var request = new ModifyBookingRequestDto
         {
-            RoomId = booking.RoomId,
-            CheckIn = booking.CheckIn,
-            CheckOut = booking.CheckOut,
-            Adults = 1,
-            Children = 1,
-            SpecialRequests = "Updated request"
+            Adults = adults,
+            Children = children
         };
 
-        var room = CreateRoom(roomId: booking.RoomId);
+        var action = () => _service.ModifyAsync(1, 1, request);
 
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        var originalPricePerNight = booking.PricePerNight;
-        var originalTotal = booking.TotalPrice;
-        var originalDiscount = booking.DiscountPercentage;
-
-        await _service.ModifyAsync(1, 1, request);
-
-        Assert.Equal(originalPricePerNight, booking.PricePerNight);
-        Assert.Equal(originalTotal, booking.TotalPrice);
-        Assert.Equal(originalDiscount, booking.DiscountPercentage);
-        Assert.Equal(1, booking.Adults);
-        Assert.Equal(1, booking.Children);
-        Assert.Equal("Updated request", booking.SpecialRequests);
-
-        _availabilityServiceMock.Verify(service => service.IsRoomAvailableAsync(
-                It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<int?>()),
-            Times.Never);
-
-        _pricingServiceMock.Verify(service => service.CalculatePriceAsync(
-                It.IsAny<int>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>(),
-                It.IsAny<DateTime>()),
-            Times.Never);
+        await Assert.ThrowsAsync<BadRequestException>(action);
+        _bookingRepository.Verify(repository => repository.SaveChangesAsync(), Times.Never);
     }
 
     [Fact]
-    public async Task ModifyAsync_WhenModificationSucceeds_ShouldUpdateInvoiceTotal()
+    public async Task ModifyAsync_WhenValid_ShouldUpdateOnlyGuestDetailsAndSave()
     {
         var booking = CreateBooking();
-
-        var secondBooking = BookingTestFactory.Create(
-            userId: 1,
-            roomId: 3,
-            checkIn: DateTime.UtcNow.AddDays(5),
-            checkOut: DateTime.UtcNow.AddDays(7),
-            adults: 1,
-            children: 0,
-            pricePerNight: 50m,
-            originalTotalPrice: 100m,
-            discountPercentage: 0,
-            discountAmount: 0m,
-            totalPrice: 100m,
-            specialRequests: null,
-            createdAt: DateTime.UtcNow,
-            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
-
-        booking.Invoice!.Bookings.Add(secondBooking);
-
-        var request = CreateValidRequest();
-        request.RoomId = 2;
-
-        var room = CreateRoom(roomId: 2);
-
-        SetupBookingAndRoom(booking, room, request.RoomId);
-
-        _availabilityServiceMock.Setup(service => service.IsRoomAvailableAsync(request.RoomId, request.CheckIn, request.CheckOut, booking.BookingId)).ReturnsAsync(true);
-
-        _pricingServiceMock.Setup(service => service.CalculatePriceAsync(request.RoomId, request.CheckIn, request.CheckOut, It.IsAny<DateTime>()))
-            .ReturnsAsync(new BookingPriceResultDto
-            {
-                PricePerNight = 150m,
-                NumberOfNights = 2,
-                OriginalTotalPrice = 300m,
-                DiscountPercentage = 10,
-                DiscountAmount = 30m,
-                TotalPrice = 270m
-            });
+        var originalRoomId = booking.RoomId;
+        var originalCheckIn = booking.CheckIn;
+        var originalCheckOut = booking.CheckOut;
+        var originalTotal = booking.TotalPrice;
+        SetupBookingAndRoom(booking, CreateRoom());
+        var request = new ModifyBookingRequestDto
+        {
+            Adults = 1,
+            Children = 2,
+            SpecialRequests = "  Late arrival  "
+        };
 
         await _service.ModifyAsync(1, 1, request);
 
-        Assert.Equal(370m, booking.Invoice.TotalAmount);
+        Assert.Equal(1, booking.Adults);
+        Assert.Equal(2, booking.Children);
+        Assert.Equal("Late arrival", booking.SpecialRequests);
+        Assert.Equal(originalRoomId, booking.RoomId);
+        Assert.Equal(originalCheckIn, booking.CheckIn);
+        Assert.Equal(originalCheckOut, booking.CheckOut);
+        Assert.Equal(originalTotal, booking.TotalPrice);
+        _bookingRepository.Verify(repository => repository.SaveChangesAsync(), Times.Once);
     }
 
     private void SetupBooking(Booking booking)
     {
-        _bookingRepositoryMock
+        _bookingRepository
             .Setup(repository => repository.GetByIdForUserAsync(1, 1))
             .ReturnsAsync(booking);
     }
 
-    private void SetupBookingAndRoom(
-        Booking booking,
-        Room room,
-        int roomId)
+    private void SetupBookingAndRoom(Booking booking, Room room)
     {
         SetupBooking(booking);
-
-        _roomRepositoryMock
-            .Setup(repository =>
-                repository.GetRoomByIdAsync(roomId))
+        _roomRepository
+            .Setup(repository => repository.GetRoomByIdAsync(booking.RoomId))
             .ReturnsAsync(room);
     }
 
-    private static Booking CreateBooking(
-        DateTime? checkIn = null,
-        DateTime? checkOut = null)
+    private static Booking CreateBooking(DateTime? checkIn = null)
     {
         var booking = BookingTestFactory.Create(
-            userId: 1,
-            roomId: 1,
-            checkIn: checkIn ?? DateTime.UtcNow.AddDays(5),
-            checkOut: checkOut ?? DateTime.UtcNow.AddDays(7),
-            adults: 2,
-            children: 0,
-            pricePerNight: 100m,
-            originalTotalPrice: 200m,
-            discountPercentage: 0,
-            discountAmount: 0m,
-            totalPrice: 200m,
-            specialRequests: null,
-            createdAt: DateTime.UtcNow,
-            pendingExpiresAt: DateTime.UtcNow.AddHours(1));
+            1,
+            1,
+            checkIn ?? DateTime.UtcNow.AddDays(5),
+            DateTime.UtcNow.AddDays(7),
+            2,
+            0,
+            100m,
+            200m,
+            0,
+            0m,
+            200m,
+            null,
+            DateTime.UtcNow,
+            DateTime.UtcNow.AddMinutes(15));
         booking.BookingId = 1;
-
-        var invoice = new Invoice(
-            userId: 1,
-            hotelId: 1,
-            totalAmount: 200m)
-        {
-            InvoiceId = 1
-        };
-
-        booking.Invoice = invoice;
-        booking.InvoiceId = invoice.InvoiceId;
-
-        invoice.Bookings.Add(booking);
-
         return booking;
     }
 
-    private static Room CreateRoom(int roomId = 1, int hotelId = 1)
+    private static Room CreateRoom()
     {
-        return new Room(
-            roomNumber: "101",
-            roomType: (RoomType)1,
-            pricePerNight: 100m,
-            adultsCapacity: 2,
-            childCapacity: 2,
-            hotelId: hotelId,
-            description: null)
+        return new Room("101", RoomType.Double, 100m, 2, 2, 1, null)
         {
-            RoomId = roomId
+            RoomId = 1
         };
     }
 
-    private static ModifyBookingRequestDto CreateValidRequest()
+    private static ModifyBookingRequestDto ValidRequest() => new()
     {
-        return new ModifyBookingRequestDto
-        {
-            RoomId = 1,
-            CheckIn = DateTime.UtcNow.AddDays(6),
-            CheckOut = DateTime.UtcNow.AddDays(8),
-            Adults = 2,
-            Children = 0,
-            SpecialRequests = null
-        };
-    }
+        Adults = 2,
+        Children = 0
+    };
 }

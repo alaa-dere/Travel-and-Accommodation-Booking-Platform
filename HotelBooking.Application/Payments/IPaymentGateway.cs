@@ -14,5 +14,10 @@ public interface IPaymentGateway
 
     Task<PaymentGatewayStatus> CancelAsync(string providerPaymentId, CancellationToken cancellationToken = default);
     Task<RefundGatewayResult> RefundAsync(string providerPaymentId, string idempotencyKey, CancellationToken cancellationToken = default);
+    Task<RefundGatewayResult> RefundAsync(
+        string providerPaymentId,
+        string idempotencyKey,
+        decimal amount,
+        CancellationToken cancellationToken = default);
     PaymentProviderWebhookEvent ParseWebhook(string payload, string signature);
 }

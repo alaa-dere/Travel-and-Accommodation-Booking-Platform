@@ -14,6 +14,7 @@ public class PaymentWebhookServiceTests
         new(2030, 1, 1, 12, 0, 0, DateTimeKind.Utc);
     private readonly Mock<IPaymentGateway> _gateway = new();
     private readonly Mock<IPaymentRepository> _payments = new();
+    private readonly Mock<IBookingRepository> _bookings = new();
     private readonly Mock<IBookingTransactionManager> _transactionManager = new();
     private readonly Mock<ICartRepository> _cartRepository = new();
     private readonly Mock<IUserRepository> _userRepository = new();
@@ -33,6 +34,7 @@ public class PaymentWebhookServiceTests
         _service = new PaymentWebhookService(
             _gateway.Object,
             _payments.Object,
+            _bookings.Object,
             _transactionManager.Object,
             _cartRepository.Object,
             _userRepository.Object,

@@ -9,4 +9,5 @@ public interface IBookingRepository
     Task<List<Booking>> GetExpiredPendingBookingsAsync(DateTime utcNow, int batchSize);
     Task SaveChangesAsync();
     Task<Booking?> GetByIdForUserAsync(int bookingId, int userId);
+    Task<Booking?> GetByProviderRefundIdAsync(string providerRefundId);
 }

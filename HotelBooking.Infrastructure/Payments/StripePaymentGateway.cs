@@ -132,6 +132,21 @@ public sealed class StripePaymentGateway : IPaymentGateway
 
     public async Task<RefundGatewayResult> RefundAsync(string providerPaymentId, string idempotencyKey, CancellationToken cancellationToken = default)
     {
+        return await RefundAsync(providerPaymentId, idempotencyKey, amount: null, cancellationToken);
+    }
+
+    public async Task<RefundGatewayResult> RefundAsync(string providerPaymentId, string idempotencyKey, decimal amount, CancellationToken cancellationToken = default)
+    {
+        if (amount <= 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Refund amount must be greater than zero.");
+        }
+
+        return await RefundAsync(providerPaymentId, idempotencyKey, (decimal?)amount, cancellationToken);
+    }
+
+    private async Task<RefundGatewayResult> RefundAsync(string providerPaymentId, string idempotencyKey, decimal? amount, CancellationToken cancellationToken)
+    {
         EnsureConfigured();
 
         try
@@ -140,6 +155,7 @@ public sealed class StripePaymentGateway : IPaymentGateway
                 new RefundCreateOptions
                 {
                     PaymentIntent = providerPaymentId,
+                    Amount = amount.HasValue ? ToMinorUnits(amount.Value) : null,
                     Reason = "requested_by_customer"
                 },
                 new RequestOptions { IdempotencyKey = idempotencyKey }, cancellationToken);

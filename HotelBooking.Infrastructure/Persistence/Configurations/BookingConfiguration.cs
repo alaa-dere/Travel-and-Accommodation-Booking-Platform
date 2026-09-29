@@ -15,9 +15,15 @@ public class BookingConfiguration : IEntityTypeConfiguration<Booking>
         builder.Property(b => b.TotalPrice).HasColumnType("decimal(18,2)");
         builder.Property(b => b.OriginalTotalPrice).HasColumnType("decimal(18,2)");
         builder.Property(b => b.DiscountAmount).HasColumnType("decimal(18,2)");
+        builder.Property(b => b.RefundedAmount).HasColumnType("decimal(18,2)");
         builder.HasOne(booking => booking.Invoice).WithMany(invoice => invoice.Bookings).HasForeignKey(booking => booking.InvoiceId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(booking => new { booking.RoomId, booking.CheckIn, booking.CheckOut });
         builder.HasIndex(booking => new { booking.BookingStatus, booking.PendingExpiresAt });
         builder.Property(booking => booking.SpecialRequests).HasMaxLength(1000);
+        builder.Property(booking => booking.ProviderRefundId).HasMaxLength(255);
+        builder.Property(booking => booking.RefundFailureCode).HasMaxLength(100);
+        builder.HasIndex(booking => booking.ProviderRefundId)
+            .IsUnique()
+            .HasFilter("[ProviderRefundId] IS NOT NULL");
     }
 }

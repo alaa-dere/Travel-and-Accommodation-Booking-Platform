@@ -48,7 +48,14 @@ public class BookingRepository : IBookingRepository
     {
         return await _dbContext.Bookings
             .Include(booking => booking.Invoice)
-            .ThenInclude(invoice => invoice!.Bookings)
+                .ThenInclude(invoice => invoice!.Bookings)
+            .Include(booking => booking.Invoice)
+                .ThenInclude(invoice => invoice!.Payment)
             .FirstOrDefaultAsync(booking => booking.BookingId == bookingId && booking.UserId == userId);
+    }
+
+    public Task<Booking?> GetByProviderRefundIdAsync(string providerRefundId)
+    {
+        return _dbContext.Bookings.SingleOrDefaultAsync(booking => booking.ProviderRefundId == providerRefundId);
     }
 }

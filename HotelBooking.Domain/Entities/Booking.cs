@@ -1,4 +1,5 @@
 using HotelBooking.Domain.ValueObjects;
+using HotelBooking.Domain.Enums;
 
 namespace HotelBooking.Domain.Entities;
 
@@ -26,6 +27,10 @@ public class Booking
     public DateTime PendingExpiresAt { get; private set; }
     public DateTime? UpdatedAt { get; private set; }
     public string? SpecialRequests { get; private set; }
+    public decimal? RefundedAmount { get; private set; }
+    public string? ProviderRefundId { get; private set; }
+    public RefundStatus? RefundStatus { get; private set; }
+    public string? RefundFailureCode { get; private set; }
     public User? User { get; internal set; }
     public Room? Room { get; internal set; }
     public Review? Review { get; internal set; }
@@ -138,6 +143,56 @@ public class Booking
         ApplyStay(stay);
         ApplyPrice(price);
         SpecialRequests = specialRequests;
+        UpdatedAt = utcNow;
+    }
+
+    public void UpdateGuestDetails(int adults, int children, string? specialRequests, DateTime utcNow)
+    {
+        ValidateUtc(utcNow, nameof(utcNow));
+        if (BookingStatus is not (BookingStatus.Pending or BookingStatus.Confirmed))
+        {
+            throw new InvalidOperationException("Only a pending or confirmed booking can be modified.");
+        }
+        if (utcNow >= CheckIn)
+        {
+            throw new InvalidOperationException("A booking cannot be modified after the stay has started.");
+        }
+        if (adults < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(adults), "At least one adult is required.");
+        }
+        if (children < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(children), "Children count cannot be negative.");
+        }
+
+        ValidateSpecialRequests(specialRequests);
+        Adults = adults;
+        Children = children;
+        SpecialRequests = string.IsNullOrWhiteSpace(specialRequests) ? null : specialRequests.Trim();
+        UpdatedAt = utcNow;
+    }
+
+    public void RecordCustomerRefund(decimal amount, string providerRefundId, RefundStatus status, string? failureCode, DateTime utcNow)
+    {
+        ValidateUtc(utcNow, nameof(utcNow));
+        if (amount <= 0 || amount > TotalPrice)
+        {
+            throw new ArgumentOutOfRangeException(nameof(amount), "Refund amount must be a valid booking amount.");
+        }
+        if (string.IsNullOrWhiteSpace(providerRefundId))
+        {
+            throw new ArgumentException("Provider refund ID is required.", nameof(providerRefundId));
+        }
+        if (ProviderRefundId is not null && ProviderRefundId != providerRefundId)
+        {
+            throw new InvalidOperationException("The booking is already linked to another refund.");
+        }
+
+        RefundedAmount = amount;
+        ProviderRefundId = providerRefundId;
+        RefundStatus = status;
+        RefundFailureCode = failureCode;
         UpdatedAt = utcNow;
     }
 
